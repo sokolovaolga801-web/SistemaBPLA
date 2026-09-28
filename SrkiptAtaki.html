@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Собери сценарий атаки на ОПО</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: #ffffff;
+            color: #1e2a3a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .widget {
+            width: 700px;
+            height: 540px;
+            background: white;
+            border-radius: 24px;
+            padding: 14px 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            /* Тень убрана */
+        }
+
+        .widget-header {
+            flex-shrink: 0;
+            margin-bottom: 8px;
+        }
+
+        h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #0b3b5c;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+        }
+
+        .subhead {
+            color: #2c5778;
+            font-size: 0.72rem;
+            background: #e8f0f9;
+            border-left: 4px solid #2a7faa;
+            border-radius: 0 10px 10px 0;
+            padding: 5px 10px;
+            line-height: 1.35;
+        }
+
+        .page {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            animation: fadeIn 0.25s ease;
+        }
+
+        .page.hidden {
+            display: none;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(12px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        .widget-scroll {
+            flex: 1;
+            overflow: visible;
+        }
+
+        .task-label {
+            display: inline-block;
+            background: #1e6f9f;
+            color: white;
+            font-weight: 600;
+            font-size: 0.62rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 4px 10px;
+            border-radius: 30px;
+            margin-bottom: 7px;
+        }
+
+        .sortable-area {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .stage-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            border: 2px solid #b8d3e8;
+            border-radius: 11px;
+            padding: 7px 11px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: #0a3146;
+            box-shadow: 0 2px 5px rgba(0, 40, 60, 0.05);
+            cursor: grab;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .stage-item:active {
+            cursor: grabbing;
+            box-shadow: 0 6px 14px rgba(0, 60, 90, 0.15);
+            border-color: #2a7faa;
+            background: #f4faff;
+        }
+
+        .stage-item.dragging {
+            opacity: 0.4;
+            border-style: dashed;
+        }
+
+        .stage-item.over {
+            border-color: #1e6f9f;
+            background: #e2f0fd;
+            transform: scale(1.01);
+        }
+
+        .stage-item.correct {
+            background: #e3f7ea;
+            border-color: #2e9e63;
+            color: #0a5c3a;
+            box-shadow: 0 2px 8px rgba(46, 158, 99, 0.18);
+        }
+        .stage-item.correct .stage-number { background: #2e9e63; color: white; }
+        .stage-item.correct .handle { color: #2e9e63; }
+
+        .stage-item.incorrect {
+            background: #fdecea;
+            border-color: #d9534f;
+            color: #7a1c18;
+            box-shadow: 0 2px 8px rgba(217, 83, 79, 0.18);
+        }
+        .stage-item.incorrect .stage-number { background: #d9534f; color: white; }
+        .stage-item.incorrect .handle { color: #d9534f; }
+
+        .handle {
+            font-size: 1rem;
+            color: #7da5c2;
+            line-height: 1;
+            flex-shrink: 0;
+            transition: color 0.2s;
+        }
+
+        .stage-number {
+            font-weight: 700;
+            background: #d4e6f5;
+            color: #0f4b6e;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 0.72rem;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .stage-text { flex: 1; }
+
+        .actions-row {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+            align-items: center;
+            width: 100%;
+        }
+
+        button {
+            background: white;
+            border: 2px solid #1e6f9f;
+            color: #1e6f9f;
+            font-weight: 600;
+            padding: 7px 14px;
+            border-radius: 40px;
+            font-size: 0.74rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        button:hover:not(:disabled) {
+            background: #1e6f9f;
+            color: white;
+        }
+
+        button.primary {
+            background: #1e6f9f;
+            color: white;
+        }
+        button.primary:hover:not(:disabled) {
+            background: #0f4b6e;
+            border-color: #0f4b6e;
+        }
+
+        button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            filter: grayscale(0.5);
+        }
+
+        .result-badge {
+            font-weight: 600;
+            font-size: 0.7rem;
+            padding: 6px 11px;
+            border-radius: 40px;
+            background: #e9f2f9;
+            color: #0f4b6e;
+            display: none;
+            white-space: nowrap;
+        }
+        .result-badge.show { display: inline-block; }
+
+        .correct-badge { background: #d4f0e0; color: #0a5c3a; }
+        .incorrect-badge { background: #ffe1de; color: #a12b1f; }
+
+        .question-page { padding-top: 2px; }
+
+        .question-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0b3b5c;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .question-intro {
+            font-size: 0.76rem;
+            color: #1e3f57;
+            line-height: 1.45;
+            background: #eef5fb;
+            border-radius: 12px;
+            padding: 9px 12px;
+            border: 1px solid #c2d9ec;
+            margin-bottom: 10px;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin-bottom: 10px;
+        }
+
+        .option {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: white;
+            border: 2px solid #b8d3e8;
+            border-radius: 12px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-size: 0.76rem;
+            line-height: 1.4;
+            color: #16324a;
+            user-select: none;
+        }
+
+        .option:hover:not(.locked) {
+            border-color: #2a7faa;
+            background: #f4faff;
+        }
+
+        .option.selected {
+            border-color: #1e6f9f;
+            background: #e2f0fd;
+        }
+
+        .option .radio {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid #7da5c2;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            margin-top: 1px;
+        }
+
+        .option.selected .radio {
+            border-color: #1e6f9f;
+            background: #1e6f9f;
+        }
+
+        .option.selected .radio::after {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .option.correct {
+            border-color: #2e9e63;
+            background: #e3f7ea;
+            color: #0a5c3a;
+        }
+        .option.correct .radio {
+            border-color: #2e9e63;
+            background: #2e9e63;
+        }
+        .option.correct .radio::after {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .option.incorrect {
+            border-color: #d9534f;
+            background: #fdecea;
+            color: #7a1c18;
+        }
+        .option.incorrect .radio {
+            border-color: #d9534f;
+            background: #d9534f;
+        }
+        .option.incorrect .radio::after {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .option.locked { cursor: default; }
+
+        .option-letter {
+            font-weight: 700;
+            color: #1e6f9f;
+            flex-shrink: 0;
+            min-width: 18px;
+        }
+        .option.correct .option-letter { color: #0a5c3a; }
+        .option.incorrect .option-letter { color: #7a1c18; }
+
+        .feedback {
+            font-size: 0.74rem;
+            line-height: 1.45;
+            padding: 9px 12px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            display: none;
+        }
+        .feedback.show { display: block; }
+        .feedback.ok {
+            background: #e3f7ea;
+            border: 1px solid #2e9e63;
+            color: #0a5c3a;
+        }
+        .feedback.bad {
+            background: #fdecea;
+            border: 1px solid #d9534f;
+            color: #7a1c18;
+        }
+
+        .page-nav {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: nowrap;
+            padding-top: 8px;
+            border-top: 1px solid #e3edf6;
+        }
+
+        .spacer { flex: 1; }
+
+        @media (max-width: 740px) {
+            .widget {
+                width: 100%;
+                height: auto;
+                min-height: 540px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="widget">
+    <div class="widget-header">
+        <h1 id="headerTitle"><span>⚡ Собери сценарий атаки</span></h1>
+        <div class="subhead" id="headerSub">
+            Расположите семь этапов атаки на ОПО в правильной последовательности. После верной сборки откроется вопрос о окне перехвата.
+        </div>
+    </div>
+
+    <!-- ================= СТРАНИЦА 1: СБОРКА ================= -->
+    <div class="page" id="page1">
+        <div class="widget-scroll">
+            <div class="task-label">📋 Перетащите этапы в нужном порядке</div>
+            <div class="sortable-area" id="stageList"></div>
+
+            <div class="actions-row">
+                <button id="checkOrderBtn" class="primary">✅ Проверить порядок</button>
+                <button id="resetOrderBtn">🔄 Сбросить</button>
+                <span id="orderResult" class="result-badge"></span>
+                <button id="goToQuestionBtn" class="primary" disabled>➡️ Перейти к вопросу</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= СТРАНИЦА 2: ВОПРОС ================= -->
+    <div class="page hidden question-page" id="page2">
+        <div class="widget-scroll">
+            <div class="question-title"><span>🛡️</span> Окно для перехвата</div>
+            <div class="question-intro">
+                Какие из этапов атаки дают <strong>реальное окно для перехвата</strong>?
+                Где вмешательство <strong>наиболее эффективно</strong> и <strong>наименее рискованно</strong> для производства?
+                Выберите один вариант ответа.
+            </div>
+
+            <div class="options-list" id="optionsList"></div>
+            <div class="feedback" id="feedback"></div>
+        </div>
+
+        <div class="page-nav">
+            <button id="backToSortBtn">⬅️ Назад к сборке</button>
+            <button id="resetQuestionBtn">🔄 Пройти заново</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const CORRECT_ORDER = [
+            'Разведка',
+            'Целеуказание',
+            'Проникновение в воздушное пространство',
+            'Идентификация критической точки',
+            'Поражение',
+            'Каскадное развитие',
+            'Отход'
+        ];
+
+        const INITIAL_STAGES = [
+            'Поражение',
+            'Разведка',
+            'Отход',
+            'Проникновение в воздушное пространство',
+            'Каскадное развитие',
+            'Целеуказание',
+            'Идентификация критической точки'
+        ];
+
+        const QUESTION = {
+            text: 'Какие этапы дают реальное окно для перехвата и где вмешательство наиболее эффективно и наименее рискованно для производства?',
+            options: [
+                {
+                    letter: 'А',
+                    text: 'Только этап «Поражение» — именно там фиксируется факт атаки, и только тогда персонал может реагировать.',
+                    correct: false
+                },
+                {
+                    letter: 'Б',
+                    text: 'Ранние этапы — «Разведка» и «Целеуказание». Здесь перехват наиболее эффективен: нарушается подготовка атаки, а производство ещё не затронуто, поэтому риск минимален.',
+                    correct: true
+                },
+                {
+                    letter: 'В',
+                    text: 'Только этап «Отход» — после атаки безопаснее всего вмешиваться, так как угроза уже реализована.',
+                    correct: false
+                },
+                {
+                    letter: 'Г',
+                    text: 'Все этапы равнозначны — окно для перехвата одинаково на любом шаге, включая «Каскадное развитие».',
+                    correct: false
+                }
+            ]
+        };
+
+        const page1 = document.getElementById('page1');
+        const page2 = document.getElementById('page2');
+        const headerTitle = document.getElementById('headerTitle');
+        const headerSub = document.getElementById('headerSub');
+
+        const stageListEl = document.getElementById('stageList');
+        const checkOrderBtn = document.getElementById('checkOrderBtn');
+        const resetOrderBtn = document.getElementById('resetOrderBtn');
+        const orderResult = document.getElementById('orderResult');
+        const goToQuestionBtn = document.getElementById('goToQuestionBtn');
+
+        const optionsList = document.getElementById('optionsList');
+        const feedback = document.getElementById('feedback');
+        const backToSortBtn = document.getElementById('backToSortBtn');
+        const resetQuestionBtn = document.getElementById('resetQuestionBtn');
+
+        let draggedItem = null;
+        let orderSolved = false;
+        let questionAnswered = false;
+
+        function renderStages(stagesArray) {
+            stageListEl.innerHTML = '';
+            stagesArray.forEach((stageText, index) => {
+                const item = document.createElement('div');
+                item.className = 'stage-item';
+                item.draggable = true;
+                item.dataset.stage = stageText;
+
+                const handle = document.createElement('span');
+                handle.className = 'handle';
+                handle.textContent = '⠿';
+
+                const numberSpan = document.createElement('span');
+                numberSpan.className = 'stage-number';
+                numberSpan.textContent = index + 1;
+
+                const textSpan = document.createElement('span');
+                textSpan.className = 'stage-text';
+                textSpan.textContent = stageText;
+
+                item.appendChild(handle);
+                item.appendChild(numberSpan);
+                item.appendChild(textSpan);
+
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('dragenter', handleDragEnter);
+                item.addEventListener('dragleave', handleDragLeave);
+                item.addEventListener('drop', handleDrop);
+
+                stageListEl.appendChild(item);
+            });
+        }
+
+        function updateNumbers() {
+            const items = [...stageListEl.querySelectorAll('.stage-item')];
+            items.forEach((item, idx) => {
+                const numSpan = item.querySelector('.stage-number');
+                if (numSpan) numSpan.textContent = idx + 1;
+            });
+        }
+
+        function clearHighlights() {
+            stageListEl.querySelectorAll('.stage-item').forEach(el => {
+                el.classList.remove('correct', 'incorrect');
+            });
+        }
+
+        function hideResultBadge() {
+            orderResult.className = 'result-badge';
+            orderResult.textContent = '';
+        }
+
+        function resetToInitial() {
+            renderStages(INITIAL_STAGES);
+            hideResultBadge();
+            orderSolved = false;
+            goToQuestionBtn.disabled = true;
+        }
+
+        function handleDragStart(e) {
+            const item = e.target.closest('.stage-item');
+            if (!item) return;
+            draggedItem = item;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', item.dataset.stage);
+            item.classList.add('dragging');
+            setTimeout(() => item.style.opacity = '0.4', 0);
+        }
+
+        function handleDragEnd(e) {
+            const item = e.target.closest('.stage-item');
+            if (item) {
+                item.classList.remove('dragging');
+                item.style.opacity = '1';
+            }
+            document.querySelectorAll('.stage-item.over').forEach(el => el.classList.remove('over'));
+            draggedItem = null;
+            updateNumbers();
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const target = e.target.closest('.stage-item');
+            if (target) target.classList.add('over');
+        }
+
+        function handleDragEnter(e) {
+            e.preventDefault();
+            const target = e.target.closest('.stage-item');
+            if (target && target !== draggedItem) target.classList.add('over');
+        }
+
+        function handleDragLeave(e) {
+            const target = e.target.closest('.stage-item');
+            if (target) target.classList.remove('over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            const target = e.target.closest('.stage-item');
+            if (!target || !draggedItem || target === draggedItem) {
+                document.querySelectorAll('.stage-item.over').forEach(el => el.classList.remove('over'));
+                return;
+            }
+
+            const parent = stageListEl;
+            const children = [...parent.children];
+            const dragIdx = children.indexOf(draggedItem);
+            const targetIdx = children.indexOf(target);
+
+            if (dragIdx === -1 || targetIdx === -1) return;
+
+            if (dragIdx < targetIdx) {
+                parent.insertBefore(draggedItem, target.nextSibling);
+            } else {
+                parent.insertBefore(draggedItem, target);
+            }
+
+            target.classList.remove('over');
+            document.querySelectorAll('.stage-item.over').forEach(el => el.classList.remove('over'));
+            updateNumbers();
+
+            clearHighlights();
+            hideResultBadge();
+            orderSolved = false;
+            goToQuestionBtn.disabled = true;
+        }
+
+        function checkOrder() {
+            const items = [...stageListEl.querySelectorAll('.stage-item')];
+            const current = items.map(item => item.dataset.stage);
+
+            let allCorrect = current.length === CORRECT_ORDER.length;
+
+            items.forEach((item, idx) => {
+                item.classList.remove('correct', 'incorrect');
+                const isRight = current[idx] === CORRECT_ORDER[idx];
+                if (isRight) {
+                    item.classList.add('correct');
+                } else {
+                    item.classList.add('incorrect');
+                    allCorrect = false;
+                }
+            });
+
+            if (allCorrect) {
+                orderResult.textContent = '✅ Верно! Все этапы в правильном порядке.';
+                orderResult.className = 'result-badge show correct-badge';
+                orderSolved = true;
+                goToQuestionBtn.disabled = false;
+            } else {
+                const correctCount = items.filter(
+                    (item, idx) => current[idx] === CORRECT_ORDER[idx]
+                ).length;
+                orderResult.textContent = `❌ Верно ${correctCount} из ${CORRECT_ORDER.length}. Исправьте красные.`;
+                orderResult.className = 'result-badge show incorrect-badge';
+                orderSolved = false;
+                goToQuestionBtn.disabled = true;
+            }
+        }
+
+        function renderOptions() {
+            optionsList.innerHTML = '';
+            QUESTION.options.forEach((opt, idx) => {
+                const el = document.createElement('div');
+                el.className = 'option';
+                el.dataset.index = idx;
+
+                const radio = document.createElement('span');
+                radio.className = 'radio';
+
+                const letter = document.createElement('span');
+                letter.className = 'option-letter';
+                letter.textContent = opt.letter + ')';
+
+                const text = document.createElement('span');
+                text.className = 'option-text';
+                text.textContent = opt.text;
+
+                el.appendChild(radio);
+                el.appendChild(letter);
+                el.appendChild(text);
+
+                el.addEventListener('click', () => selectOption(idx));
+
+                optionsList.appendChild(el);
+            });
+        }
+
+        function selectOption(idx) {
+            if (questionAnswered) return;
+            checkQuestion(idx);
+        }
+
+        function checkQuestion(idx) {
+            questionAnswered = true;
+
+            const optionEls = [...optionsList.querySelectorAll('.option')];
+            const chosen = QUESTION.options[idx];
+
+            optionEls.forEach((el, i) => {
+                el.classList.add('locked');
+                el.classList.remove('selected');
+                if (i === idx) {
+                    el.classList.add(chosen.correct ? 'correct' : 'incorrect');
+                }
+                if (!chosen.correct && QUESTION.options[i].correct) {
+                    el.classList.add('correct');
+                }
+            });
+
+            if (chosen.correct) {
+                feedback.className = 'feedback ok show';
+                feedback.innerHTML = '<strong>✅ Верно!</strong> Именно ранние этапы — «Разведка» и «Целеуказание» — дают реальное окно для перехвата. ' +
+                    'Здесь вмешательство наиболее эффективно (нарушается подготовка атаки) и наименее рискованно для производства (технологический процесс ещё не затронут).';
+            } else {
+                feedback.className = 'feedback bad show';
+                feedback.innerHTML = '<strong>❌ Неверно.</strong> Правильный ответ — <strong>Б</strong>: ранние этапы «Разведка» и «Целеуказание». ' +
+                    'Именно там перехват наиболее эффективен (срывается подготовка атаки) и наименее рискован для производства, ' +
+                    'поскольку технологический процесс ещё не затронут.';
+            }
+        }
+
+        function resetQuestion() {
+            questionAnswered = false;
+            feedback.className = 'feedback';
+            feedback.innerHTML = '';
+            renderOptions();
+        }
+
+        function goToQuestion() {
+            if (!orderSolved) return;
+            page1.classList.add('hidden');
+            page2.classList.remove('hidden');
+            headerTitle.innerHTML = '<span>🛡️ Вопрос: окно для перехвата</span>';
+            headerSub.textContent = 'Выберите один вариант ответа. После выбора вы увидите правильный ответ и пояснение.';
+            resetQuestion();
+        }
+
+        function goBackToSort() {
+            page2.classList.add('hidden');
+            page1.classList.remove('hidden');
+            headerTitle.innerHTML = '<span>⚡ Собери сценарий атаки</span>';
+            headerSub.textContent = 'Расположите семь этапов атаки на ОПО в правильной последовательности. После верной сборки откроется вопрос о окне перехвата.';
+        }
+
+        function init() {
+            resetToInitial();
+
+            checkOrderBtn.addEventListener('click', checkOrder);
+            resetOrderBtn.addEventListener('click', () => { resetToInitial(); });
+            goToQuestionBtn.addEventListener('click', goToQuestion);
+            backToSortBtn.addEventListener('click', goBackToSort);
+            resetQuestionBtn.addEventListener('click', resetQuestion);
+
+            stageListEl.addEventListener('dragover', (e) => e.preventDefault());
+            stageListEl.addEventListener('drop', (e) => {
+                if (e.target === stageListEl) {
+                    e.preventDefault();
+                    if (draggedItem) {
+                        stageListEl.appendChild(draggedItem);
+                        updateNumbers();
+                        draggedItem.classList.remove('dragging');
+                        draggedItem.style.opacity = '1';
+                        draggedItem = null;
+                        clearHighlights();
+                        hideResultBadge();
+                        orderSolved = false;
+                        goToQuestionBtn.disabled = true;
+                    }
+                }
+            });
+
+            renderOptions();
+        }
+
+        init();
+    })();
+</script>
+</body>
+</html>
