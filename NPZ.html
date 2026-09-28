@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Карта уязвимостей ОПО</title>
+<style>
+:root{
+  --white:#ffffff;
+  --bg:#ffffff;
+  --panel:#ffffff;
+  --panel2:#eef3f9;
+  --line:#cfdce9;
+  --line2:#b7c9dc;
+  --txt:#1a2f45;
+  --dim:#5d7893;
+  --blue:#1e6fd9;
+  --blue2:#2b8aef;
+  --blue-l:#e3eefa;
+  --blue-d:#0d4a95;
+  --ok:#0f9d6b;
+  --ok-l:#e0f5ec;
+  --ok-b:#9edcc4;
+  --bad:#d64545;
+  --bad-l:#fbe6e6;
+  --bad-b:#e8b3b3;
+  --grey:#8fa8c0;
+  --grey-l:#f0f3f7;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:#ffffff;
+  color:var(--txt);
+  font-family:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  font-size:15px; line-height:1.55; min-height:100vh;
+  display:flex; align-items:flex-start; justify-content:center;
+  padding:20px;
+}
+
+.frame{
+  width:700px; height:850px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:16px;
+  display:flex; flex-direction:column;
+  overflow:hidden;
+  position:relative;
+  transition:all .25s ease;
+}
+.frame.fs{
+  width:100vw; height:100vh;
+  border-radius:0;
+  border:none;
+}
+
+.frame-header{
+  padding:14px 20px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,var(--blue-l),var(--panel));
+  display:flex; align-items:center; gap:14px;
+  flex:0 0 auto;
+}
+.frame-title{
+  font-size:15px; font-weight:700; color:var(--blue-d);
+  letter-spacing:-.01em; flex:1;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.frame-title span{
+  font-weight:400; color:var(--dim); font-size:13px; margin-left:8px;
+}
+.fs-btn{
+  background:var(--white); border:1px solid var(--line2); color:var(--blue);
+  width:34px; height:34px; border-radius:8px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:16px; transition:.15s; flex:0 0 auto;
+}
+.fs-btn:hover{background:var(--blue-l); border-color:var(--blue)}
+
+.frame-body{
+  flex:1 1 auto;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+}
+
+.map-area{
+  flex:0 0 auto;
+  padding:12px 16px 8px;
+  display:flex;
+  flex-direction:column;
+}
+.scheme-wrap{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:8px;
+  overflow:hidden;
+  width:100%;
+}
+.scheme-wrap svg{
+  width:100%;
+  height:auto;
+  display:block;
+  border-radius:8px;
+}
+
+.controls{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 16px;
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  background:var(--panel2);
+  flex:0 0 auto;
+  flex-wrap:wrap;
+}
+.pbar{
+  flex:1 1 140px;
+  height:8px;
+  background:var(--white);
+  border-radius:99px;
+  overflow:hidden;
+  border:1px solid var(--line);
+  min-width:120px;
+}
+.pfill{
+  height:100%; width:0;
+  background:linear-gradient(90deg,var(--blue2),var(--ok));
+  border-radius:99px;
+  transition:width .4s cubic-bezier(.2,.8,.2,1);
+}
+.ptext{
+  font-size:11px;
+  color:var(--dim);
+  letter-spacing:.03em;
+  white-space:nowrap;
+}
+.ptext b{color:var(--txt); font-variant-numeric:tabular-nums; font-size:13px}
+
+.comments-area{
+  flex:1 1 auto;
+  overflow:auto;
+  padding:12px 16px 16px;
+  min-height:0;
+}
+
+.placeholder{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  color:var(--dim);
+  font-size:13px;
+  font-style:italic;
+  line-height:1.6;
+  padding:30px 20px;
+  background:var(--panel2);
+  border:1px dashed var(--line2);
+  border-radius:12px;
+  min-height:120px;
+}
+
+.result-card{
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:12px 14px;
+  margin-bottom:10px;
+  background:var(--white);
+  transition:.2s;
+  border-left-width:4px;
+}
+.result-card:last-child{margin-bottom:0}
+.result-card.correct{
+  border-left-color:var(--ok);
+  background:linear-gradient(180deg,var(--ok-l),var(--white) 60%);
+}
+.result-card.wrong,
+.result-card.missed{
+  border-left-color:var(--bad);
+  background:linear-gradient(180deg,var(--bad-l),var(--white) 60%);
+}
+.result-card.missed{
+  border-style:dashed;
+}
+
+.rc-head{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:8px;
+  flex-wrap:wrap;
+}
+.rc-num{
+  width:24px; height:24px; flex:0 0 24px;
+  border-radius:7px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:800;
+  color:#fff;
+}
+.result-card.correct .rc-num{background:var(--ok)}
+.result-card.wrong .rc-num,
+.result-card.missed .rc-num{background:var(--bad)}
+
+.rc-name{
+  font-size:14px;
+  font-weight:700;
+  color:var(--blue-d);
+  flex:1;
+  min-width:0;
+}
+.result-card.correct .rc-name{color:#0a6b4a}
+.result-card.wrong .rc-name,
+.result-card.missed .rc-name{color:#a83232}
+
+.rc-tag{
+  font-size:9.5px;
+  font-weight:800;
+  letter-spacing:.12em;
+  padding:3px 9px;
+  border-radius:99px;
+  white-space:nowrap;
+}
+.rc-tag.ok{background:var(--ok-l); color:var(--ok); border:1px solid var(--ok-b)}
+.rc-tag.bad{background:var(--bad-l); color:var(--bad); border:1px solid var(--bad-b)}
+
+.rc-body{font-size:12.5px; line-height:1.55}
+.rc-body p{margin:0 0 8px; color:#3d5772}
+.rc-body p:last-child{margin-bottom:0}
+.rc-lbl{
+  font-size:9.5px;
+  letter-spacing:.13em;
+  text-transform:uppercase;
+  font-weight:700;
+  margin-bottom:2px;
+  display:block;
+}
+.result-card.correct .rc-lbl{color:var(--ok)}
+.result-card.wrong .rc-lbl,
+.result-card.missed .rc-lbl{color:var(--bad)}
+
+.btn{
+  display:inline-flex; align-items:center; gap:6px; justify-content:center;
+  background:var(--blue); color:#fff; border:none; border-radius:9px;
+  padding:9px 18px; font:inherit; font-weight:700; font-size:12.5px;
+  cursor:pointer; transition:.15s;
+}
+.btn:hover:not(:disabled){background:var(--blue-d); transform:translateY(-1px)}
+.btn:disabled{opacity:.45; cursor:not-allowed; transform:none}
+.btn.ghost{background:var(--white); border:1px solid var(--line2); color:var(--blue)}
+.btn.ghost:hover:not(:disabled){border-color:var(--blue); background:var(--blue-l)}
+.btn.sm{padding:7px 13px; font-size:11.5px}
+
+.summary{
+  display:flex; gap:10px; flex-wrap:wrap;
+  padding:10px 14px;
+  background:var(--blue-l);
+  border:1px solid #b8d4f2;
+  border-radius:12px;
+  margin-bottom:12px;
+  font-size:12.5px;
+  align-items:center;
+}
+.summary b{font-size:14px}
+.summary .ok-c{color:var(--ok); font-weight:700}
+.summary .bad-c{color:var(--bad); font-weight:700}
+.summary .sep{width:1px; height:18px; background:var(--line2)}
+
+/* ====== SVG ZONES ====== */
+.zone{cursor:pointer; outline:none}
+.zrect{fill:#eef3f9; stroke:#b7c9dc; stroke-width:1.5; transition:.18s}
+.zone:hover .zrect{fill:#dceaf9; stroke:var(--blue2)}
+.zone:focus-visible .zrect{stroke:var(--blue); stroke-dasharray:5 3}
+
+.zone.marked .zrect{fill:#d6e8fb; stroke:var(--blue2); stroke-width:2.5}
+.zone.marked:hover .zrect{fill:#c2ddf8}
+
+.zone.correct .zrect{fill:var(--ok-l); stroke:var(--ok); stroke-width:2.5}
+.zone.wrong .zrect{fill:var(--bad-l); stroke:var(--bad); stroke-width:2.5}
+.zone.missed .zrect{fill:var(--bad-l); stroke:var(--bad); stroke-width:2.5; stroke-dasharray:7 4}
+.zone.locked{cursor:default}
+
+.zlabel{fill:#4a6784; font-size:11px; font-weight:600; font-family:inherit; pointer-events:none; user-select:none}
+.zone.marked .zlabel{fill:var(--blue-d)}
+.zone.correct .zlabel{fill:#0a6b4a}
+.zone.wrong .zlabel,
+.zone.missed .zlabel{fill:#a83232}
+
+/* не критические — теперь визуально такие же, как критические */
+.zone.notcrit .zrect{fill:#eef3f9; stroke:#b7c9dc; stroke-width:1.5}
+.zone.notcrit:hover .zrect{fill:#dceaf9; stroke:var(--blue2)}
+.zone.notcrit .zlabel{fill:#4a6784}
+.zone.notcrit.marked .zrect{fill:#d6e8fb; stroke:var(--blue2); stroke-width:2.5}
+.zone.notcrit.marked .zlabel{fill:var(--blue-d)}
+.zone.notcrit.checked .zrect{fill:#fff4e6; stroke:#e6a23c; stroke-width:2.5}
+.zone.notcrit.checked .zlabel{fill:#b07d1a}
+
+.zone.notcrit .ic{stroke:#4d84b8}
+.zone.notcrit .ic2{stroke:#8fb0d0}
+.zone.notcrit .nf{fill:none; stroke:#4d84b8; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+.zone.notcrit.marked .ic{stroke:var(--blue2)}
+.zone.notcrit.marked .nf{stroke:var(--blue2)}
+.zone.notcrit.checked .nf{stroke:#e6a23c}
+.zone.notcrit.checked .ic{stroke:#e6a23c}
+.zone.notcrit.checked .ic2{stroke:#f0c580}
+
+.ic{fill:none; stroke:#4d84b8; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; transition:.18s}
+.ic2{fill:none; stroke:#8fb0d0; stroke-width:1.5; stroke-linecap:round; transition:.18s}
+.zone.correct .ic{stroke:var(--ok)}
+.zone.correct .ic2{stroke:#5dc9a1}
+.zone.wrong .ic,
+.zone.missed .ic{stroke:var(--bad)}
+.zone.wrong .ic2,
+.zone.missed .ic2{stroke:#e89a9a}
+.zone.marked .ic{stroke:var(--blue2)}
+.zone.marked .ic2{stroke:#7db0e0}
+
+.marker{opacity:0; transition:.2s; pointer-events:none}
+.marker circle{fill:var(--blue2)}
+.marker text{fill:#ffffff; font-size:13px; font-weight:800; font-family:inherit}
+.zone.marked .marker{opacity:1}
+.zone.marked .marker circle{fill:var(--blue2)}
+.zone.correct .marker{opacity:1}
+.zone.correct .marker circle{fill:var(--ok)}
+.zone.wrong .marker{opacity:1}
+.zone.wrong .marker circle{fill:var(--bad)}
+.zone.missed .marker{opacity:1}
+.zone.missed .marker circle{fill:var(--bad)}
+.zone.notcrit.checked .marker{opacity:1}
+.zone.notcrit.checked .marker circle{fill:#e6a23c}
+
+.toast{
+  position:absolute; left:50%; bottom:20px; transform:translate(-50%,20px);
+  background:var(--blue-d); color:#fff; border-left:3px solid var(--blue2);
+  padding:10px 16px; border-radius:9px; font-size:12.5px;
+  opacity:0; pointer-events:none; transition:.25s; z-index:50; max-width:90%;
+}
+.toast.on{opacity:1; transform:translate(-50%,0)}
+
+@media print{
+  body{background:#fff; padding:0}
+  .frame{width:100%; height:auto; border:none}
+  .frame.fs{width:100%; height:auto}
+  .fs-btn,.btn,.toast,.controls{display:none!important}
+  .comments-area{overflow:visible}
+}
+</style>
+</head>
+<body>
+
+<div class="frame" id="frame">
+  <div class="frame-header">
+    <div class="frame-title">Карта уязвимостей объекта <span>· практикум</span></div>
+    <button class="fs-btn" id="fsBtn" title="На весь экран" aria-label="Развернуть на весь экран">⛶</button>
+  </div>
+
+  <div class="frame-body">
+
+    <div class="map-area">
+      <div class="scheme-wrap" id="scheme"></div>
+    </div>
+
+    <div class="controls">
+      <div class="pbar"><div class="pfill" id="pfill"></div></div>
+      <div class="ptext">ОТМЕЧЕНО: <b id="pcount">0</b> / 11</div>
+      <button class="btn sm" id="checkBtn" disabled>Проверить</button>
+      <button class="btn ghost sm" id="resetBtn">Сбросить</button>
+    </div>
+
+    <div class="comments-area" id="comments">
+      <div class="placeholder">
+        Отметьте на схеме критические точки, которые, по вашему мнению,<br>
+        наиболее уязвимы для атаки БПЛА.<br><br>
+        Когда отметите все — нажмите <b style="color:var(--blue)">«Проверить»</b>.<br>
+        По каждой точке появится комментарий: правильная — зелёным, ошибочная — красным.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   ДАННЫЕ
+   ============================================================ */
+const POINTS = [
+  {id:'tankfarm', icon:'tanks', short:'Резервуарный парк', name:'Резервуарный парк ЛВЖ / ГЖ',
+   why:'Максимальная концентрация горючей массы. Тонкостенные резервуары, открытые дыхательные клапаны и замерные люки.',
+   cascade:'Пробой крыши → вскипание и перелив → пожар в обваловании → блокировка пожарных расчётов → переброс огня на соседние резервуары.',
+   miss:'Самая «жирная» цель: один дрон — пожар на сутки и более, экологический ущерб и остановка товарооборота.'},
+  {id:'avt', icon:'columns', short:'ЭЛОУ-АВТ', name:'Установка первичной переработки ЭЛОУ-АВТ',
+   why:'Головная установка завода: с неё начинается вся цепочка. Крупногабаритные колонны и печи на открытой площадке.',
+   cascade:'Поражение колонны → аварийный сброс → остановка установки → вторичные процессы без сырья → остановка завода «в корне».',
+   miss:'Её остановка останавливает завод целиком — это точка нулевого приоритета.'},
+  {id:'reform', icon:'reactors', short:'Риформинг / H₂', name:'Риформинг и гидроочистка (водородный блок)',
+   why:'Водород под давлением 20–40 атм и температурой 400–500 °C. Компактный блок реакторов и компрессоров.',
+   cascade:'Утечка H₂ → струевое горение под давлением → прогар соседних линий → развитие аварии по всей установке.',
+   miss:'Пожар водорода нельзя потушить проливом — нужно остановить установку и сбросить давление.'},
+  {id:'tec', icon:'power', short:'ТЭЦ / пар', name:'ТЭЦ, энергоблок (пар, тепло, электроэнергия)',
+   why:'Источник пара и тепла для технологии и паровых завес. Котлы, турбины, паропроводы высокого давления.',
+   cascade:'Потеря пара → не работают паровые завесы и насосы → корректное глушение установок невозможно.',
+   miss:'Без пара завод нельзя даже корректно остановить — регламентные действия не выполняются.'},
+  {id:'sug', icon:'spheres', short:'Парк СУГ', name:'Парк СУГ (шаровые резервуары сжиженного газа)',
+   why:'Сжиженные газы под давлением в шаровых резервуарах. Энергия уже запасена внутри. Открытая площадка.',
+   cascade:'Разгерметизация шара → облако ТВС → взрыв → BLEVE соседних шаров. Поражение в радиусе сотен метров.',
+   miss:'Здесь атака даёт не пожар, а взрыв — с поражением людей и разрушением соседних объектов.'},
+  {id:'furnaces', icon:'furnace', short:'Печи', name:'Технологические трубчатые печи',
+   why:'Змеевики под давлением и температурой 350–500 °C, открытое пламя горелок, топливные линии.',
+   cascade:'Пробитие змеевика → разрыв под давлением → розлив раскалённого продукта → мгновенный пожар по эстакадам.',
+   miss:'Источник открытого огня и точка выхода продукта под давлением при температуре самовоспламенения.'},
+  {id:'gpp', icon:'substation', short:'ГПП / подстанция', name:'Главная понизительная подстанция (ГПП, ОРУ)',
+   why:'Единая точка питания всего завода: трансформаторы, ОРУ, кабельные вводы. Нет резервирования по шинам.',
+   cascade:'Поражение трансформатора → веерное отключение → «тёмный завод» → аварийные сбросы и глушение в нештатном режиме.',
+   miss:'Одна точка отключает всё — и технологию, и системы безопасности одновременно.'},
+  {id:'flare', icon:'flare', short:'Факел', name:'Факельное хозяйство',
+   why:'Постоянный открытый огонь и последняя линия защиты при аварии. Ствол, линии сброса, сепараторы.',
+   cascade:'Отказ системы стравливания → давление некуда сбрасывать → риск разрыва аппаратов по всей цепочке.',
+   miss:'Это предохранительный клапан всего завода: без него авария развивается по худшему сценарию.'},
+  {id:'cpu', icon:'control', short:'ЦПУ', name:'ЦПУ — центральный пункт управления',
+   why:'Мозг объекта: оперативный персонал, пульты, щиты, противоаварийная автоматика. Здание с большим остеклением.',
+   cascade:'Поражение ЦПУ → потеря управления и выведение персонала → аварийные процессы без вмешательства человека.',
+   miss:'Атака на людей в центре управления — это потеря способности управлять объектом вообще.'},
+  {id:'comms', icon:'comms', short:'Связь / АСУ', name:'Узел связи и серверная АСУ ТП',
+   why:'Кибер-физический контур: серверы АСУ ТП, телеметрия, антенно-мачтовые сооружения, радиосвязь.',
+   cascade:'Поражение антенн → потеря телеметрии → объект «слепой»: нельзя увидеть параметры и отдать команду.',
+   miss:'Без него авария развивается незамеченной — сигнал не доходит ни до диспетчера, ни до ПАЗ.'},
+  {id:'loading', icon:'loading', short:'Слив-налив', name:'Сливно-наливная эстакада (товарный парк отгрузки)',
+   why:'Открытые потоки нефтепродукта, одновременное присутствие людей, автоцистерн и ж/д транспорта.',
+   cascade:'Пожар на эстакаде → поражение персонала и транспорта → блокировка выезда → остановка отгрузки.',
+   miss:'Атака даёт прямые потери среди людей, а остановка отгрузки «давит» на весь завод через заполнение резервуаров.'}
+];
+
+const NOT_CRIT = [
+  {id:'admin', icon:'admin', short:'АБК', name:'Административно-бытовой корпус',
+   msg:'АБК и столовая — бытовые помещения. Их поражение не запускает каскадную аварию на технологии. Риск для людей есть, но это не критическая точка ОПО.'},
+  {id:'parking', icon:'parking', short:'Автостоянка', name:'Автостоянка личного транспорта',
+   msg:'Автостоянка не содержит технологического оборудования и не участвует в производственном цикле. Не является критической точкой.'},
+  {id:'green', icon:'green', short:'Зелёная зона', name:'Газон и зелёные насаждения',
+   msg:'Озеленение не влияет на технологический процесс. Поражение этой зоны не даёт каскадного эффекта.'},
+  {id:'road', icon:'road', short:'Дорога', name:'Внутризаводская дорога',
+   msg:'Дорога — транспортная артерия, но не технологический объект. Сама по себе не является критической точкой для атаки БПЛА.'},
+  {id:'fence', icon:'fence', short:'Ограждение', name:'Периметральное ограждение',
+   msg:'Ограждение — элемент физической защиты, но не критическая точка. Его повреждение не запускает каскадную аварию.'},
+  {id:'light', icon:'light', short:'Освещение', name:'Мачты освещения',
+   msg:'Освещение важно для безопасности, но не является критической точкой ОПО. Потеря света не останавливает производство.'}
+];
+
+/* ============================================================
+   РАЗМЕЩЕНИЕ: сетка 4 колонки × 5 строк — всего 20 слотов
+   Перемешиваем 11 критических + 6 некритических = 17 зон
+   ============================================================ */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+// Сетка: 4 колонки × 5 строк, внутри области (30..970, 60..530)
+// Каждая ячейка: 4 колонки шириной ~220, 5 строк высотой ~88
+const COLS = 4;
+const ROWS = 5;
+const AREA_X = 40;
+const AREA_Y = 60;
+const AREA_W = 920;
+const AREA_H = 480;
+const GAP = 12;
+const CELL_W = (AREA_W - GAP*(COLS-1)) / COLS;   // ~221
+const CELL_H = (AREA_H - GAP*(ROWS-1)) / ROWS;   // ~86.4
+
+const allZones = [
+  ...POINTS.map(p => ({...p, type:'crit'})),
+  ...NOT_CRIT.map(p => ({...p, type:'notcrit'}))
+];
+
+const shuffled = shuffle(allZones);
+
+// Занимаем первые 17 ячеек (из 20), оставляя 3 пустыми
+const slots = [];
+for(let r=0;r<ROWS;r++){
+  for(let c=0;c<COLS;c++){
+    slots.push({r, c});
+  }
+}
+const usedSlots = shuffle(slots).slice(0, shuffled.length);
+
+// Назначаем координаты
+const placed = shuffled.map((z, i) => {
+  const s = usedSlots[i];
+  const x = AREA_X + s.c * (CELL_W + GAP);
+  const y = AREA_Y + s.r * (CELL_H + GAP);
+  return {...z, x, y, w: CELL_W, h: CELL_H};
+});
+
+const PLACED_CRIT = placed.filter(p => p.type === 'crit');
+const PLACED_NOT = placed.filter(p => p.type === 'notcrit');
+
+/* ============================================================
+   ИКОНКИ
+   ============================================================ */
+function iconSVG(type, ix, iy, iw, ih){
+  const cx = ix + iw/2, cy = iy + ih/2;
+  const P = [];
+  switch(type){
+    case 'tanks': {
+      const r = Math.min(iw/5.2, ih/3.6);
+      const dx = iw*0.24, dy = ih*0.26;
+      [[cx-dx,cy-dy],[cx+dx,cy-dy],[cx-dx,cy+dy],[cx+dx,cy+dy]].forEach(([px,py])=>{
+        P.push(`<circle cx="${px}" cy="${py}" r="${r}" class="ic"/>`);
+        P.push(`<circle cx="${px}" cy="${py}" r="${r*0.5}" class="ic2"/>`);
+      });
+      break;
+    }
+    case 'spheres': {
+      const r = Math.min(iw/4.4, ih/2.8);
+      const dx = iw*0.21;
+      [cx-dx, cx+dx].forEach(px=>{
+        P.push(`<circle cx="${px}" cy="${cy}" r="${r}" class="ic"/>`);
+        P.push(`<line x1="${px}" y1="${cy-r}" x2="${px}" y2="${cy+r}" class="ic2"/>`);
+        P.push(`<line x1="${px-r}" y1="${cy}" x2="${px+r}" y2="${cy}" class="ic2"/>`);
+      });
+      break;
+    }
+    case 'columns': {
+      const bw = Math.max(6, iw/9);
+      const hs = [ih*0.9, ih*0.65, ih*0.8];
+      hs.forEach((hh,i)=>{
+        const px = ix + iw*0.25 + i*(iw*0.25);
+        P.push(`<rect x="${px-bw/2}" y="${iy+ih-hh}" width="${bw}" height="${hh}" rx="${bw/2}" class="ic"/>`);
+        P.push(`<line x1="${px-bw/2}" y1="${iy+ih-hh*0.55}" x2="${px+bw/2}" y2="${iy+ih-hh*0.55}" class="ic2"/>`);
+      });
+      break;
+    }
+    case 'reactors': {
+      const bw = iw*0.22, bh = ih*0.78;
+      [cx-iw*0.2, cx+iw*0.2].forEach(px=>{
+        P.push(`<rect x="${px-bw/2}" y="${iy+ih-bh}" width="${bw}" height="${bh}" rx="${bw/2}" class="ic"/>`);
+        P.push(`<line x1="${px-bw/2}" y1="${iy+ih-bh*0.62}" x2="${px+bw/2}" y2="${iy+ih-bh*0.62}" class="ic2"/>`);
+      });
+      break;
+    }
+    case 'flare': {
+      const px = ix + iw*0.3;
+      P.push(`<path d="M ${px} ${iy+ih*0.04} L ${px-iw*0.055} ${iy+ih*0.3} L ${px+iw*0.055} ${iy+ih*0.3} Z" fill="#2b8aef" stroke="none" opacity=".8"/>`);
+      P.push(`<line x1="${px}" y1="${iy+ih*0.3}" x2="${px}" y2="${iy+ih*0.85}" class="ic"/>`);
+      P.push(`<line x1="${px-iw*0.1}" y1="${iy+ih*0.3}" x2="${px+iw*0.1}" y2="${iy+ih*0.3}" class="ic2"/>`);
+      P.push(`<rect x="${ix+iw*0.62}" y="${iy+ih*0.5}" width="${iw*0.2}" height="${ih*0.35}" rx="5" class="ic"/>`);
+      P.push(`<line x1="${ix+iw*0.2}" y1="${iy+ih*0.62}" x2="${ix+iw*0.62}" y2="${iy+ih*0.62}" class="ic2"/>`);
+      break;
+    }
+    case 'furnace': {
+      P.push(`<rect x="${ix+iw*0.13}" y="${iy+ih*0.14}" width="${iw*0.74}" height="${ih*0.7}" rx="6" class="ic"/>`);
+      P.push(`<path d="M ${cx} ${iy+ih*0.28} C ${cx+iw*0.11} ${iy+ih*0.48}, ${cx+iw*0.07} ${iy+ih*0.68}, ${cx} ${iy+ih*0.76} C ${cx-iw*0.07} ${iy+ih*0.68}, ${cx-iw*0.11} ${iy+ih*0.48}, ${cx} ${iy+ih*0.28} Z" fill="#2b8aef" stroke="none" opacity=".75"/>`);
+      P.push(`<line x1="${ix+iw*0.13}" y1="${iy+ih*0.3}" x2="${ix+iw*0.87}" y2="${iy+ih*0.3}" class="ic2"/>`);
+      break;
+    }
+    case 'substation': {
+      const t = iw*0.2;
+      P.push(`<path d="M ${cx} ${iy+ih*0.1} L ${cx+t} ${iy+ih*0.5} L ${cx-t} ${iy+ih*0.5} Z" class="ic"/>`);
+      P.push(`<line x1="${cx}" y1="${iy+ih*0.5}" x2="${cx}" y2="${iy+ih*0.68}" class="ic2"/>`);
+      P.push(`<rect x="${ix+iw*0.09}" y="${iy+ih*0.7}" width="${iw*0.32}" height="${ih*0.2}" rx="3" class="ic"/>`);
+      P.push(`<rect x="${ix+iw*0.59}" y="${iy+ih*0.7}" width="${iw*0.32}" height="${ih*0.2}" rx="3" class="ic"/>`);
+      break;
+    }
+    case 'power': {
+      P.push(`<rect x="${ix+iw*0.08}" y="${iy+ih*0.3}" width="${iw*0.58}" height="${ih*0.6}" rx="5" class="ic"/>`);
+      P.push(`<rect x="${ix+iw*0.75}" y="${iy+ih*0.04}" width="${iw*0.13}" height="${ih*0.86}" rx="3" class="ic"/>`);
+      P.push(`<path d="M ${ix+iw*0.42} ${iy+ih*0.38} l ${-iw*0.075} ${ih*0.26} l ${iw*0.07} 0 l ${-iw*0.05} ${ih*0.2} l ${iw*0.14} ${-ih*0.3} l ${-iw*0.07} 0 Z" fill="#2b8aef" stroke="none"/>`);
+      break;
+    }
+    case 'control': {
+      P.push(`<rect x="${ix+iw*0.08}" y="${iy+ih*0.18}" width="${iw*0.84}" height="${ih*0.72}" rx="6" class="ic"/>`);
+      for(let i=0;i<4;i++){
+        P.push(`<rect x="${ix+iw*0.15+i*iw*0.185}" y="${iy+ih*0.3}" width="${iw*0.1}" height="${ih*0.15}" rx="2" class="ic2"/>`);
+        P.push(`<rect x="${ix+iw*0.15+i*iw*0.185}" y="${iy+ih*0.54}" width="${iw*0.1}" height="${ih*0.15}" rx="2" class="ic2"/>`);
+      }
+      break;
+    }
+    case 'comms': {
+      P.push(`<path d="M ${cx-iw*0.17} ${iy+ih*0.9} L ${cx} ${iy+ih*0.12} L ${cx+iw*0.17} ${iy+ih*0.9} Z" class="ic"/>`);
+      P.push(`<line x1="${cx-iw*0.09}" y1="${iy+ih*0.5}" x2="${cx+iw*0.09}" y2="${iy+ih*0.5}" class="ic2"/>`);
+      P.push(`<line x1="${cx-iw*0.13}" y1="${iy+ih*0.7}" x2="${cx+iw*0.13}" y2="${iy+ih*0.7}" class="ic2"/>`);
+      P.push(`<circle cx="${cx+iw*0.23}" cy="${iy+ih*0.22}" r="${iw*0.085}" class="ic"/>`);
+      P.push(`<line x1="${cx+iw*0.17}" y1="${iy+ih*0.3}" x2="${cx+iw*0.29}" y2="${iy+ih*0.14}" class="ic2"/>`);
+      break;
+    }
+    case 'loading': {
+      P.push(`<line x1="${ix+iw*0.07}" y1="${iy+ih*0.28}" x2="${ix+iw*0.93}" y2="${iy+ih*0.28}" class="ic"/>`);
+      P.push(`<line x1="${ix+iw*0.13}" y1="${iy+ih*0.28}" x2="${ix+iw*0.13}" y2="${iy+ih*0.8}" class="ic2"/>`);
+      P.push(`<line x1="${ix+iw*0.5}" y1="${iy+ih*0.28}" x2="${ix+iw*0.5}" y2="${iy+ih*0.8}" class="ic2"/>`);
+      P.push(`<line x1="${ix+iw*0.87}" y1="${iy+ih*0.28}" x2="${ix+iw*0.87}" y2="${iy+ih*0.8}" class="ic2"/>`);
+      P.push(`<rect x="${ix+iw*0.55}" y="${iy+ih*0.48}" width="${iw*0.3}" height="${ih*0.2}" rx="3" class="ic"/>`);
+      P.push(`<rect x="${ix+iw*0.46}" y="${iy+ih*0.56}" width="${iw*0.1}" height="${ih*0.12}" rx="3" class="ic"/>`);
+      P.push(`<circle cx="${ix+iw*0.6}" cy="${iy+ih*0.72}" r="${iw*0.032}" class="ic2"/>`);
+      P.push(`<circle cx="${ix+iw*0.81}" cy="${iy+ih*0.72}" r="${iw*0.032}" class="ic2"/>`);
+      break;
+    }
+  }
+  return P.join('');
+}
+
+function iconNotCrit(type, ix, iy, iw, ih){
+  const cx = ix + iw/2, cy = iy + ih/2;
+  const P = [];
+  const st = 'class="nf"';
+  switch(type){
+    case 'admin': {
+      P.push(`<rect x="${ix+iw*0.15}" y="${iy+ih*0.3}" width="${iw*0.7}" height="${ih*0.6}" rx="4" ${st}/>`);
+      P.push(`<path d="M ${ix+iw*0.08} ${iy+ih*0.3} L ${cx} ${iy+ih*0.08} L ${ix+iw*0.92} ${iy+ih*0.3} Z" ${st}/>`);
+      P.push(`<rect x="${cx-iw*0.05}" y="${iy+ih*0.55}" width="${iw*0.1}" height="${ih*0.35}" ${st}/>`);
+      break;
+    }
+    case 'parking': {
+      P.push(`<rect x="${ix+iw*0.15}" y="${iy+ih*0.15}" width="${iw*0.7}" height="${ih*0.7}" rx="6" ${st}/>`);
+      P.push(`<text x="${cx}" y="${cy+ih*0.12}" text-anchor="middle" fill="#4d84b8" font-size="${ih*0.5}" font-weight="800" font-family="Inter,sans-serif">P</text>`);
+      break;
+    }
+    case 'green': {
+      const r = Math.min(iw,ih)*0.26;
+      P.push(`<circle cx="${cx-iw*0.15}" cy="${cy}" r="${r}" ${st}/>`);
+      P.push(`<circle cx="${cx+iw*0.15}" cy="${cy}" r="${r}" ${st}/>`);
+      P.push(`<circle cx="${cx}" cy="${cy-ih*0.12}" r="${r*0.8}" ${st}/>`);
+      break;
+    }
+    case 'road': {
+      P.push(`<path d="M ${ix+iw*0.1} ${iy+ih*0.85} L ${ix+iw*0.35} ${iy+ih*0.15} L ${ix+iw*0.65} ${iy+ih*0.15} L ${ix+iw*0.9} ${iy+ih*0.85} Z" ${st}/>`);
+      P.push(`<line x1="${cx}" y1="${iy+ih*0.28}" x2="${cx}" y2="${iy+ih*0.44}" ${st}/>`);
+      P.push(`<line x1="${cx}" y1="${iy+ih*0.56}" x2="${cx}" y2="${iy+ih*0.72}" ${st}/>`);
+      break;
+    }
+    case 'fence': {
+      P.push(`<line x1="${ix+iw*0.1}" y1="${iy+ih*0.35}" x2="${ix+iw*0.9}" y2="${iy+ih*0.35}" ${st}/>`);
+      P.push(`<line x1="${ix+iw*0.1}" y1="${iy+ih*0.65}" x2="${ix+iw*0.9}" y2="${iy+ih*0.65}" ${st}/>`);
+      [0.2,0.4,0.6,0.8].forEach(f=>{
+        P.push(`<line x1="${ix+iw*f}" y1="${iy+ih*0.15}" x2="${ix+iw*f}" y2="${iy+ih*0.85}" ${st}/>`);
+      });
+      break;
+    }
+    case 'light': {
+      P.push(`<line x1="${cx}" y1="${iy+ih*0.15}" x2="${cx}" y2="${iy+ih*0.85}" ${st}/>`);
+      P.push(`<line x1="${cx-iw*0.15}" y1="${iy+ih*0.15}" x2="${cx+iw*0.15}" y2="${iy+ih*0.15}" ${st}/>`);
+      P.push(`<circle cx="${cx-iw*0.15}" cy="${iy+ih*0.15}" r="${iw*0.05}" ${st}/>`);
+      P.push(`<circle cx="${cx+iw*0.15}" cy="${iy+ih*0.15}" r="${iw*0.05}" ${st}/>`);
+      break;
+    }
+  }
+  return P.join('');
+}
+
+/* ============================================================
+   СХЕМА
+   ============================================================ */
+function buildSVG(){
+  const allPlaced = [...PLACED_CRIT, ...PLACED_NOT];
+
+  const zones = allPlaced.map(p=>{
+    const iconFn = p.type === 'crit' ? iconSVG : iconNotCrit;
+    return `
+    <g class="zone ${p.type === 'crit' ? '' : 'notcrit'}" data-id="${p.id}" data-type="${p.type}" tabindex="0" role="button" aria-label="${p.name}">
+      <rect class="zrect" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" rx="10"/>
+      ${iconFn(p.icon, p.x+12, p.y+10, p.w-24, p.h-42)}
+      <text class="zlabel" x="${p.x+p.w/2}" y="${p.y+p.h-12}" text-anchor="middle">${p.short}</text>
+      <g class="marker" transform="translate(${p.x+p.w-18},${p.y+17})">
+        <circle r="10"/><text text-anchor="middle" dy="5"></text>
+      </g>
+    </g>`;
+  }).join('');
+
+  return `
+  <svg viewBox="0 0 1000 570" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-label="Схема типового НПЗ">
+    <defs>
+      <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e8eff7" stroke-width="1"/>
+      </pattern>
+    </defs>
+    <rect width="1000" height="570" fill="#fbfdff"/>
+    <rect width="1000" height="570" fill="url(#grid)"/>
+    <rect x="20" y="20" width="960" height="530" rx="16" fill="none" stroke="#c3d6e8" stroke-width="2" stroke-dasharray="12 7"/>
+    <text x="36" y="42" fill="#8fa8c0" font-size="11" font-weight="700" letter-spacing="2.5" font-family="Inter,sans-serif">ПЕРИМЕТР ОБЪЕКТА</text>
+    <text x="964" y="42" fill="#8fa8c0" font-size="11" font-weight="700" letter-spacing="2.5" text-anchor="end" font-family="Inter,sans-serif">ТИПОВОЙ НПЗ</text>
+    ${zones}
+  </svg>`;
+}
+
+document.getElementById('scheme').innerHTML = buildSVG();
+
+/* ============================================================
+   ЛОГИКА
+   ============================================================ */
+let marked = new Set();       // все отмеченные (и критические, и нет)
+let checked = false;
+
+const el = id => document.getElementById(id);
+const commentsEl = el('comments');
+const checkBtn = el('checkBtn');
+
+function paint(){
+  document.querySelectorAll('.zone').forEach(g=>{
+    const id = g.dataset.id;
+    const isCrit = g.dataset.type === 'crit';
+
+    g.classList.remove('marked','correct','wrong','missed','checked','locked');
+
+    if(!checked){
+      if(marked.has(id)) g.classList.add('marked');
+    } else {
+      g.classList.add('locked');
+      if(isCrit){
+        if(marked.has(id)) g.classList.add('correct');
+        else g.classList.add('missed');
+      } else {
+        if(marked.has(id)) g.classList.add('checked');
+        else g.classList.add('wrong'); // не отмеченная некритическая — серая, но помечаем как «не выбрана» — оставим нейтральной
+      }
+    }
+
+    const marker = g.querySelector('.marker');
+    if(marker){
+      const txt = marker.querySelector('text');
+      if(!checked){
+        txt.textContent = marked.has(id) ? '✓' : '!';
+      } else if(isCrit){
+        txt.textContent = marked.has(id) ? '✓' : '!';
+      } else {
+        txt.textContent = marked.has(id) ? '!' : '✓';
+      }
+    }
+  });
+
+  // прогресс = сколько критических отмечено
+  const critMarked = PLACED_CRIT.filter(p=>marked.has(p.id)).length;
+  el('pcount').textContent = critMarked;
+  el('pfill').style.width = (critMarked / PLACED_CRIT.length * 100) + '%';
+  checkBtn.disabled = marked.size === 0 || checked;
+  checkBtn.textContent = checked ? 'Проверено' : 'Проверить';
+}
+
+function renderComments(){
+  const parts = [];
+
+  const critCorrect = PLACED_CRIT.filter(p=>marked.has(p.id));
+  const critWrong = PLACED_CRIT.filter(p=>!marked.has(p.id));
+  const notCritSelected = PLACED_NOT.filter(p=>marked.has(p.id));
+
+  parts.push(`<div class="summary">
+    <span>Верных: <span class="ok-c">${critCorrect.length}</span></span>
+    <span class="sep"></span>
+    <span>Ошибок: <span class="bad-c">${notCritSelected.length}</span></span>
+    <span class="sep"></span>
+    <span>Пропущено: <span class="bad-c">${critWrong.length}</span></span>
+  </div>`);
+
+  // 1. ВЕРНЫЕ
+  if(critCorrect.length){
+    critCorrect.forEach((p,i)=>{
+      parts.push(`
+        <div class="result-card correct">
+          <div class="rc-head">
+            <span class="rc-num">${i+1}</span>
+            <span class="rc-name">${p.name}</span>
+            <span class="rc-tag ok">ВЕРНО</span>
+          </div>
+          <div class="rc-body">
+            <span class="rc-lbl">Почему уязвима</span>
+            <p>${p.why}</p>
+            <span class="rc-lbl">Каскадный сценарий</span>
+            <p>${p.cascade}</p>
+          </div>
+        </div>`);
+    });
+  }
+
+  // 2. ОШИБКИ — выбраны некритические
+  if(notCritSelected.length){
+    notCritSelected.forEach(p=>{
+      parts.push(`
+        <div class="result-card wrong">
+          <div class="rc-head">
+            <span class="rc-num">✕</span>
+            <span class="rc-name">${p.name}</span>
+            <span class="rc-tag bad">ОШИБКА</span>
+          </div>
+          <div class="rc-body">
+            <span class="rc-lbl">Почему это не критическая точка</span>
+            <p>${p.msg}</p>
+          </div>
+        </div>`);
+    });
+  }
+
+  // 3. ПРОПУЩЕННЫЕ критические
+  if(critWrong.length){
+    critWrong.forEach(p=>{
+      parts.push(`
+        <div class="result-card missed">
+          <div class="rc-head">
+            <span class="rc-num">!</span>
+            <span class="rc-name">${p.name}</span>
+            <span class="rc-tag bad">ПРОПУЩЕНО</span>
+          </div>
+          <div class="rc-body">
+            <span class="rc-lbl">Чем грозит пропуск</span>
+            <p>${p.miss}</p>
+            <span class="rc-lbl">Почему уязвима</span>
+            <p>${p.why}</p>
+            <span class="rc-lbl">Каскадный сценарий</span>
+            <p>${p.cascade}</p>
+          </div>
+        </div>`);
+    });
+  }
+
+  if(!parts.length){
+    parts.push(`<div class="placeholder">Ничего не отмечено.</div>`);
+  }
+
+  commentsEl.innerHTML = parts.join('');
+  commentsEl.scrollTop = 0;
+}
+
+let toastTimer;
+function toast(msg){
+  const t = el('toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('on'), 2200);
+}
+
+el('scheme').addEventListener('click', e=>{
+  if(checked){
+    toast('Проверка выполнена. Нажмите «Сбросить», чтобы пройти заново.');
+    return;
+  }
+  const g = e.target.closest('.zone');
+  if(!g) return;
+  const id = g.dataset.id;
+
+  if(marked.has(id)) marked.delete(id);
+  else marked.add(id);
+
+  paint();
+});
+
+el('scheme').addEventListener('keydown', e=>{
+  if(e.key === 'Enter' || e.key === ' '){
+    const g = e.target.closest('.zone');
+    if(g){ e.preventDefault(); g.dispatchEvent(new MouseEvent('click', {bubbles:true})); }
+  }
+});
+
+checkBtn.onclick = ()=>{
+  if(checked) return;
+  if(marked.size === 0){
+    toast('Отметьте хотя бы одну точку.');
+    return;
+  }
+  checked = true;
+  paint();
+  renderComments();
+  toast('Проверка выполнена. Комментарии — ниже схемы.');
+};
+
+el('resetBtn').onclick = ()=>{
+  marked.clear();
+  checked = false;
+  // Перемешиваем заново
+  const newShuffled = shuffle(allZones);
+  const newSlots = shuffle(slots).slice(0, newShuffled.length);
+  newShuffled.forEach((z, i) => {
+    const s = newSlots[i];
+    z.x = AREA_X + s.c * (CELL_W + GAP);
+    z.y = AREA_Y + s.r * (CELL_H + GAP);
+  });
+  PLACED_CRIT.length = 0;
+  PLACED_NOT.length = 0;
+  newShuffled.forEach(z=>{
+    if(z.type === 'crit') PLACED_CRIT.push(z);
+    else PLACED_NOT.push(z);
+  });
+  document.getElementById('scheme').innerHTML = buildSVG();
+  paint();
+  commentsEl.innerHTML = `<div class="placeholder">
+    Отметьте на схеме критические точки, которые, по вашему мнению,<br>
+    наиболее уязвимы для атаки БПЛА.<br><br>
+    Когда отметите все — нажмите <b style="color:var(--blue)">«Проверить»</b>.<br>
+    По каждой точке появится комментарий: правильная — зелёным, ошибочная — красным.
+  </div>`;
+  toast('Сброшено. Точки перемешаны.');
+};
+
+paint();
+
+const frame = el('frame');
+el('fsBtn').onclick = ()=>{
+  const fs = frame.classList.toggle('fs');
+  el('fsBtn').textContent = fs ? '✕' : '⛶';
+  el('fsBtn').title = fs ? 'Свернуть' : 'На весь экран';
+};
+</script>
+</body>
+</html>
