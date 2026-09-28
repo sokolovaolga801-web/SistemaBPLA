@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дрон над резервуарным парком · Соедини действие и последствие</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .card {
+            width: 700px;
+            height: 900px;
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 24px 28px;
+            border: 1px solid #dbe4f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 1.45rem;
+            font-weight: 700;
+            color: #0e2a4a;
+            margin-bottom: 6px;
+            letter-spacing: -0.3px;
+            line-height: 1.25;
+            flex-shrink: 0;
+        }
+
+        .subhead {
+            color: #4a6a92;
+            font-size: 0.9rem;
+            margin-bottom: 14px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2ebf5;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .subhead i {
+            font-style: normal;
+            font-size: 1.05rem;
+        }
+
+        /* ====== Изображение dron.png (1672 × 941) ====== */
+        .image-placeholder {
+            width: 100%;
+            aspect-ratio: 1672 / 941;
+            border-radius: 16px;
+            background: #f0f5fc;
+            border: 2px dashed #a9c1e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            margin-bottom: 18px;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .image-placeholder img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .image-placeholder .placeholder-text {
+            color: #6b8bb5;
+            font-size: 0.9rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-align: center;
+            padding: 0 16px;
+        }
+
+        /* ====== Игровое поле ====== */
+        .board {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            flex: 1;
+            margin-bottom: 14px;
+            min-height: 0;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .column-title {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+            color: #4a6a92;
+            padding-left: 4px;
+            margin-bottom: 2px;
+            flex-shrink: 0;
+        }
+
+        .item {
+            background: #ffffff;
+            border: 1.5px solid #c5d8ef;
+            border-radius: 14px;
+            padding: 12px 14px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: #183a60;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            line-height: 1.35;
+            position: relative;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            user-select: none;
+        }
+
+        .item:hover:not(.matched):not(.disabled) {
+            background: #f0f6fd;
+            border-color: #1e5aa8;
+            transform: translateY(-1px);
+        }
+
+        .item.selected {
+            background: #e8f1fc;
+            border-color: #1e5aa8;
+            box-shadow: 0 0 0 2px rgba(30, 90, 168, 0.25);
+        }
+
+        .item.matched {
+            background: #e6f7ec;
+            border-color: #1e9e4a;
+            color: #0e4a26;
+            cursor: default;
+        }
+
+        .item.matched::after {
+            content: "✓";
+            position: absolute;
+            top: 6px;
+            right: 10px;
+            color: #1e9e4a;
+            font-weight: 800;
+            font-size: 0.85rem;
+        }
+
+        .item.wrong {
+            background: #fdeaea;
+            border-color: #c0392b;
+            color: #7a1f15;
+            animation: shake 0.35s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* ====== Прогресс ====== */
+        .progress {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.82rem;
+            color: #4a6a92;
+            font-weight: 600;
+            padding: 10px 4px;
+            border-top: 1px solid #eef3f9;
+            flex-shrink: 0;
+        }
+
+        .progress .count {
+            color: #1e5aa8;
+            font-weight: 800;
+        }
+
+        /* ====== Кнопка сброса ====== */
+        .reset-btn {
+            background: transparent;
+            border: 1.5px solid #c5d8ef;
+            color: #4a6a92;
+            padding: 9px 22px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.18s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.3px;
+            font-family: inherit;
+            align-self: flex-start;
+            flex-shrink: 0;
+        }
+
+        .reset-btn:hover {
+            border-color: #1e5aa8;
+            color: #1e5aa8;
+            background: #f0f6fd;
+        }
+
+        /* ====== Сообщение о победе ====== */
+        .win-banner {
+            display: none;
+            background: #1e9e4a;
+            color: #ffffff;
+            padding: 12px 18px;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            text-align: center;
+            margin-top: 10px;
+            flex-shrink: 0;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .win-banner.visible {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+
+    <!-- ====== ЗАГОЛОВОК ====== -->
+    <h1>Дрон над резервуарным парком</h1>
+
+    <div class="subhead">
+        <i>📡</i> Камеры зафиксировали объект. Дрон не меняет положение.
+    </div>
+
+    <!-- ====== ИЗОБРАЖЕНИЕ dron.png (1672 × 941) ====== -->
+    <div class="image-placeholder">
+        <img src="dron.png" alt="Дрон над резервуарным парком"
+             onerror="this.style.display='none'; this.parentNode.querySelector('.placeholder-text').style.display='block';">
+        <div class="placeholder-text" style="display:none;">
+            📷 Здесь будет изображение <b>dron.png</b> (1672 × 941)<br>
+            <span style="font-size:0.78rem; opacity:0.75;">(положите файл рядом с HTML)</span>
+        </div>
+    </div>
+
+    <!-- ====== ИГРОВОЕ ПОЛЕ ====== -->
+    <div class="board">
+        <div class="column">
+            <div class="column-title">Действие</div>
+            <div class="item" data-side="action" data-id="1">Немедленно передать информацию руководителю смены и ждать указаний.</div>
+            <div class="item" data-side="action" data-id="2">Запустить средства радиоэлектронного подавления (РЭП).</div>
+            <div class="item" data-side="action" data-id="3">Начать эвакуацию персонала из зоны возможного поражения.</div>
+        </div>
+
+        <div class="column">
+            <div class="column-title">Последствие</div>
+            <div class="item" data-side="consequence" data-id="2">Дрон нейтрализован, однако средства РЭП создают мощные помехи: возможна потеря собственной связи и сбои автоматики парка.</div>
+            <div class="item" data-side="consequence" data-id="3">Люди спасены, но операции остановлены, возникает паника. Эвакуация занимает время, и дрон всё ещё в воздухе.</div>
+            <div class="item" data-side="consequence" data-id="1">Вы выигрываете время для анализа, но рискуете упустить окно перехвата — дрон может оставаться над парком неограниченно долго.</div>
+        </div>
+    </div>
+
+    <!-- ====== ПРОГРЕСС ====== -->
+    <div class="progress">
+        <span>Соединено: <span class="count" id="matchedCount">0</span> из 3</span>
+        <button class="reset-btn" id="resetBtn">
+            <span>⟲</span> Сбросить
+        </button>
+    </div>
+
+    <!-- ====== ПОБЕДА ====== -->
+    <div class="win-banner" id="winBanner">
+        ✅ Все пары соединены верно!
+    </div>
+</div>
+
+<script>
+    (function() {
+        const allItems = document.querySelectorAll('.item');
+        const matchedCountEl = document.getElementById('matchedCount');
+        const resetBtn = document.getElementById('resetBtn');
+        const winBanner = document.getElementById('winBanner');
+
+        let selected = null;
+        let matched = 0;
+        let lock = false;
+
+        function clearSelection() {
+            allItems.forEach(el => el.classList.remove('selected'));
+            selected = null;
+        }
+
+        function updateProgress() {
+            matchedCountEl.textContent = matched;
+            if (matched === 3) {
+                winBanner.classList.add('visible');
+            } else {
+                winBanner.classList.remove('visible');
+            }
+        }
+
+        function markMatched(a, b) {
+            a.classList.remove('selected', 'wrong');
+            b.classList.remove('selected', 'wrong');
+            a.classList.add('matched');
+            b.classList.add('matched');
+            matched++;
+            updateProgress();
+        }
+
+        function markWrong(a, b) {
+            lock = true;
+            a.classList.remove('selected');
+            b.classList.remove('selected');
+            a.classList.add('wrong');
+            b.classList.add('wrong');
+
+            setTimeout(() => {
+                a.classList.remove('wrong');
+                b.classList.remove('wrong');
+                lock = false;
+                clearSelection();
+            }, 600);
+        }
+
+        function handleItemClick(event) {
+            if (lock) return;
+
+            const item = event.currentTarget;
+
+            if (item.classList.contains('matched')) return;
+
+            if (!selected) {
+                clearSelection();
+                item.classList.add('selected');
+                selected = item;
+                return;
+            }
+
+            if (selected === item) {
+                clearSelection();
+                return;
+            }
+
+            if (selected.dataset.side === item.dataset.side) {
+                clearSelection();
+                item.classList.add('selected');
+                selected = item;
+                return;
+            }
+
+            const actionEl = selected.dataset.side === 'action' ? selected : item;
+            const consequenceEl = selected.dataset.side === 'consequence' ? selected : item;
+
+            if (actionEl.dataset.id === consequenceEl.dataset.id) {
+                markMatched(actionEl, consequenceEl);
+                selected = null;
+            } else {
+                markWrong(selected, item);
+            }
+        }
+
+        function resetGame() {
+            clearSelection();
+            allItems.forEach(el => {
+                el.classList.remove('matched', 'wrong', 'selected');
+            });
+            matched = 0;
+            lock = false;
+            updateProgress();
+        }
+
+        allItems.forEach(el => {
+            el.addEventListener('click', handleItemClick);
+        });
+
+        resetBtn.addEventListener('click', resetGame);
+
+        updateProgress();
+    })();
+</script>
+</body>
+</html>
