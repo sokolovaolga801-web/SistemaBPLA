@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>РЭБ и защита от БПЛА | Интерактив</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      background: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    /* Основной контейнер 700x450 — без тени и без границ */
+    .widget {
+      width: 700px;
+      height: 450px;
+      background: #ffffff;
+      border-radius: 0;
+      box-shadow: none;
+      border: none;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Заголовок */
+    .widget-header {
+      padding: 14px 22px 12px;
+      background: #ffffff;
+      border-bottom: 1px solid #e3eefb;
+      flex-shrink: 0;
+    }
+
+    .widget-header h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #0a3b7a;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .widget-header h1 .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #1e7fe0;
+      box-shadow: 0 0 0 3px rgba(30, 127, 224, 0.15);
+    }
+
+    .widget-header p {
+      font-size: 0.76rem;
+      color: #4a6b96;
+      margin-top: 3px;
+    }
+
+    /* Область контента */
+    .widget-body {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    /* ЭКРАН 1 — карточки */
+    .screen-cards {
+      position: absolute;
+      inset: 0;
+      padding: 16px 20px 18px;
+      display: flex;
+      flex-direction: column;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      opacity: 1;
+      transform: scale(1);
+      background: #ffffff;
+    }
+
+    .screen-cards.hidden {
+      opacity: 0;
+      transform: scale(0.96);
+      pointer-events: none;
+    }
+
+    .cards-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      flex: 1;
+    }
+
+    .card {
+      background: #f7fbff;
+      border: 1.5px solid #cfe2f9;
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      transition: 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: #1e7fe0;
+      transform: translateY(-3px);
+      background: #ffffff;
+      box-shadow: 0 10px 20px -8px rgba(30, 127, 224, 0.25);
+    }
+
+    /* Изображение занимает большую часть карточки */
+    .card-image {
+      width: 100%;
+      flex: 1 1 auto;
+      min-height: 160px;
+      background: #eaf3fe;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border-bottom: 1px solid #d6e6fa;
+      position: relative;
+    }
+
+    .card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .card-image .placeholder-icon {
+      font-size: 3.4rem;
+      color: #7fb0e8;
+      line-height: 1;
+      user-select: none;
+    }
+
+    .card-body {
+      padding: 11px 14px 13px;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-body h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #0a3b7a;
+      line-height: 1.2;
+      margin-bottom: 5px;
+    }
+
+    .card-body p {
+      font-size: 0.8rem;
+      line-height: 1.35;
+      color: #4a6b96;
+      margin-bottom: 8px;
+    }
+
+    .card-cta {
+      font-size: 0.74rem;
+      font-weight: 700;
+      color: #1e7fe0;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .card-cta::after {
+      content: "→";
+      font-size: 0.9rem;
+      transition: transform 0.2s;
+    }
+
+    .card:hover .card-cta::after {
+      transform: translateX(3px);
+    }
+
+    /* ЭКРАН 2 — детальная информация */
+    .screen-detail {
+      position: absolute;
+      inset: 0;
+      padding: 16px 24px 18px;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      transform: scale(1.03);
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      background: #ffffff;
+    }
+
+    .screen-detail.active {
+      opacity: 1;
+      transform: scale(1);
+      pointer-events: auto;
+    }
+
+    .detail-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      flex-shrink: 0;
+    }
+
+    .back-btn {
+      background: #eef4fd;
+      border: 1.5px solid #cfe2f9;
+      color: #0a3b7a;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 7px 16px;
+      border-radius: 40px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: 0.18s;
+      font-family: inherit;
+    }
+
+    .back-btn:hover {
+      background: #1e7fe0;
+      border-color: #1e7fe0;
+      color: #ffffff;
+    }
+
+    .back-btn:hover svg {
+      stroke: #ffffff;
+    }
+
+    .back-btn svg {
+      width: 13px;
+      height: 13px;
+      stroke: #0a3b7a;
+      stroke-width: 2.6;
+      fill: none;
+      transition: 0.18s;
+    }
+
+    .detail-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #1e7fe0;
+      background: #e4efff;
+      padding: 5px 14px;
+      border-radius: 40px;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+
+    .detail-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 6px;
+      scrollbar-width: thin;
+      scrollbar-color: #b8d4f5 #ffffff;
+    }
+
+    .detail-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .detail-scroll::-webkit-scrollbar-track {
+      background: #ffffff;
+    }
+
+    .detail-scroll::-webkit-scrollbar-thumb {
+      background: #b8d4f5;
+      border-radius: 10px;
+    }
+
+    .detail-image {
+      width: 100%;
+      height: 120px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #eaf3fe;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1.5px solid #cfe2f9;
+      flex-shrink: 0;
+    }
+
+    .detail-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .detail-image .placeholder-icon {
+      font-size: 3rem;
+      color: #7fb0e8;
+      user-select: none;
+    }
+
+    .detail-content h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #0a3b7a;
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    .detail-content p {
+      font-size: 0.85rem;
+      line-height: 1.55;
+      color: #2c4a6e;
+      margin-bottom: 10px;
+    }
+
+    .detail-content ul {
+      list-style: none;
+      padding-left: 0;
+      margin-bottom: 10px;
+    }
+
+    .detail-content li {
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: #2c4a6e;
+      margin-bottom: 8px;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .detail-content li::before {
+      content: "▹";
+      position: absolute;
+      left: 2px;
+      color: #1e7fe0;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .detail-content .accent {
+      color: #0a3b7a;
+      font-weight: 700;
+      background: linear-gradient(90deg, #dcecff, transparent);
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+
+    .detail-content .warn-box {
+      background: #fff8ed;
+      border-left: 3px solid #f0a03c;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: #7a5210;
+      margin: 12px 0 4px;
+    }
+
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 10px 0 4px;
+    }
+
+    .chip {
+      background: #e4efff;
+      border: 1px solid #b8d4f5;
+      color: #0a3b7a;
+      padding: 4px 12px;
+      border-radius: 30px;
+      font-size: 0.74rem;
+      font-weight: 600;
+    }
+
+    /* скрываем контент по умолчанию */
+    .detail-pane {
+      display: none;
+    }
+
+    .detail-pane.active {
+      display: block;
+      animation: fadeSlide 0.28s ease;
+    }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+<div class="widget">
+  <div class="widget-header">
+    <h1><span class="dot"></span> Защита от БПЛА</h1>
+    <p>Нажмите на карточку, чтобы узнать подробнее</p>
+  </div>
+
+  <div class="widget-body">
+    <!-- ЭКРАН 1: карточки -->
+    <div class="screen-cards" id="screenCards">
+      <div class="cards-row">
+        <!-- Карточка 1: РЭБ -->
+        <div class="card" data-target="reb" tabindex="0" role="button" aria-label="Радиоэлектронная борьба">
+          <div class="card-image">
+            <img src="1.png" alt="Радиоэлектронная борьба"
+                 onerror="this.style.display='none'; this.parentNode.querySelector('.placeholder-icon').style.display='block';">
+            <span class="placeholder-icon" style="display:none;">📡</span>
+          </div>
+          <div class="card-body">
+            <h3>Радиоэлектронная борьба</h3>
+            <p>Подавление каналов управления, видео и навигации.</p>
+            <div class="card-cta">Подробнее</div>
+          </div>
+        </div>
+
+        <!-- Карточка 2: Физические барьеры -->
+        <div class="card" data-target="barriers" tabindex="0" role="button" aria-label="Физические барьеры">
+          <div class="card-image">
+            <img src="2.png" alt="Физические барьеры"
+                 onerror="this.style.display='none'; this.parentNode.querySelector('.placeholder-icon').style.display='block';">
+            <span class="placeholder-icon" style="display:none;">🕸️</span>
+          </div>
+          <div class="card-body">
+            <h3>Физические барьеры</h3>
+            <p>Пассивная защита: сети «Паутина» и «Дарвин».</p>
+            <div class="card-cta">Подробнее</div>
+          </div>
+        </div>
+
+        <!-- Карточка 3: Кинетическое поражение -->
+        <div class="card" data-target="kinetic" tabindex="0" role="button" aria-label="Кинетическое поражение">
+          <div class="card-image">
+            <img src="3.png" alt="Кинетическое поражение"
+                 onerror="this.style.display='none'; this.parentNode.querySelector('.placeholder-icon').style.display='block';">
+            <span class="placeholder-icon" style="display:none;">🎯</span>
+          </div>
+          <div class="card-body">
+            <h3>Кинетическое поражение</h3>
+            <p>Перехватчики, ЗУ, стрелковое оружие.</p>
+            <div class="card-cta">Подробнее</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ЭКРАН 2: детали -->
+    <div class="screen-detail" id="screenDetail">
+      <div class="detail-top">
+        <button class="back-btn" id="backBtn">
+          <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          Назад
+        </button>
+        <span class="detail-badge" id="detailBadge">Метод</span>
+      </div>
+
+      <div class="detail-scroll">
+        <!-- Контент: РЭБ -->
+        <div class="detail-pane" id="pane-reb">
+          <div class="detail-image">
+            <img src="1.png" alt="РЭБ"
+                 onerror="this.style.display='none'; this.parentNode.querySelector('.placeholder-icon').style.display='block';">
+            <span class="placeholder-icon" style="display:none;">📡</span>
+          </div>
+          <div class="detail-content">
+            <h2>Радиоэлектронная борьба</h2>
+            <p><span class="accent">РЭБ — это мягкое подавление.</span> Комплекс глушит каналы управления, видеопоток и спутниковую навигацию. Когда связь рвётся, дрон зависает, уходит на возврат или садится.</p>
+            <p>Если подавлена навигация — аппарат сносит ветром, он теряет ориентацию. Пример — комплекс <strong>«СЕРП»</strong>, подавляющий GNSS L1 и широкополосные каналы управления.</p>
+            <div class="chip-list">
+              <span class="chip">GNSS L1</span>
+              <span class="chip">2.4 / 5.8 ГГц</span>
+              <span class="chip">видеопоток</span>
+              <span class="chip">управление</span>
+            </div>
+            <p><strong>Но РЭБ — не панацея.</strong></p>
+            <ul>
+              <li>Для работы передатчиков нужны <strong>частотные разрешения</strong>, без них вы нарушите закон.</li>
+              <li>Мощный подавитель способен заглушить <strong>вашу собственную связь</strong> и контрольно-измерительные приборы.</li>
+              <li>Дроны на <strong>оптоволокне</strong> (2024–2025) вообще не излучают радиосигнал — заглушить их нельзя.</li>
+            </ul>
+            <div class="warn-box">
+              ⚡ РЭБ эффективна против радиоканалов, но бессильна против оптоволоконных дронов.
+            </div>
+          </div>
+        </div>
+
+        <!-- Контент: Физические барьеры -->
+        <div class="detail-pane" id="pane-barriers">
+          <div class="detail-image">
+            <img src="2.png" alt="Физические барьеры"
+                 onerror="this.style.display='none'; this.parentNode.querySelector('.placeholder-icon').style.display='block';">
+            <span class="placeholder-icon" style="display:none;">🕸️</span>
+          </div>
+          <div class="detail-content">
+            <h2>Физические барьеры</h2>
+            <p><span class="accent">Пассивная защита</span>, и на ОПО она работает надёжнее всего.</p>
+            <p><strong>«Паутина»</strong> — модульная стальная конструкция с высокопрочной сетью — перехватывает дрон массой <strong>до 200 кг</strong> на скорости <strong>до 250 км/ч</strong>.</p>
+            <p><strong>«Дарвин»</strong> — растяжимая сеть с податливыми узлами, которые гасят кинетическую энергию и захватывают аппарат <strong>без осколков</strong>.</p>
+            <p>Для резервуарных парков с высокими требованиями пожарной безопасности это критично:</p>
+            <ul>
+              <li>нет осколков,</li>
+              <li>нет вторичных поражений,</li>
+              <li>не нужно электричество и оператор.</li>
+            </ul>
+            <div class="chip-list">
+              <span class="chip">без осколков</span>
+              <span class="chip">податливые узлы</span>
+              <span class="chip">автономность</span>
+            </div>
+            <div class="warn-box" style="background:#e8f4ff; border-left-color:#1e7fe0; color:#0a3b7a;">
+              ✅ Барьер работает круглосуточно и автономно.
+            </div>
+          </div>
+        </div>
+
+        <!-- Контент: Кинетическое поражение -->
+        <div class="detail-pane" id="pane-kinetic">
+          <div class="detail-image">
+            <img src="3.png" alt="Кинетическое поражение"
+                 onerror="this.style.display='none'; this.parentNode.querySelector('.placeholder-icon').style.display='block';">
+            <span class="placeholder-icon" style="display:none;">🎯</span>
+          </div>
+          <div class="detail-content">
+            <h2>Кинетическое поражение</h2>
+            <p>Дроны-перехватчики, зенитные установки, пулемёты на ОПО применимы <span class="accent">ограниченно</span>.</p>
+            <p>Риск осколков и падения боеприпасов на технологическое оборудование слишком высок.</p>
+            <p><strong>Стрелковое оружие</strong> остаётся последним рубежом — и только в руках обученной группы быстрого реагирования, а не охранника с дробовиком.</p>
+            <ul>
+              <li>Требует профессиональной подготовки.</li>
+              <li>Применяется точечно, с учётом расположения критических узлов.</li>
+              <li>Неэффективно против роя дронов.</li>
+            </ul>
+            <div class="warn-box">
+              💥 Кинетика на ОПО — крайняя мера. Риск вторичных поражений слишком высок.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    const screenCards = document.getElementById('screenCards');
+    const screenDetail = document.getElementById('screenDetail');
+    const backBtn = document.getElementById('backBtn');
+    const detailBadge = document.getElementById('detailBadge');
+    const allPanes = document.querySelectorAll('.detail-pane');
+    const allCards = document.querySelectorAll('.card');
+
+    const badgeTitles = {
+      reb: 'Радиоэлектронная борьба',
+      barriers: 'Физические барьеры',
+      kinetic: 'Кинетическое поражение'
+    };
+
+    function openDetail(target) {
+      allPanes.forEach(p => p.classList.remove('active'));
+      const activePane = document.getElementById('pane-' + target);
+      if (activePane) activePane.classList.add('active');
+
+      detailBadge.textContent = badgeTitles[target] || 'Метод';
+
+      screenCards.classList.add('hidden');
+      screenDetail.classList.add('active');
+
+      const scrollContainer = document.querySelector('.detail-scroll');
+      if (scrollContainer) scrollContainer.scrollTop = 0;
+    }
+
+    function closeDetail() {
+      screenDetail.classList.remove('active');
+      screenCards.classList.remove('hidden');
+    }
+
+    allCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const target = card.dataset.target;
+        if (target) openDetail(target);
+      });
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          const target = card.dataset.target;
+          if (target) openDetail(target);
+        }
+      });
+    });
+
+    backBtn.addEventListener('click', closeDetail);
+  })();
+</script>
+</body>
+</html>
