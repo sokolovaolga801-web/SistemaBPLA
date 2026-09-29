@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сенсоры обнаружения БПЛА</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --card-bg: #ffffff;
+            --card-border: #d0e0f5;
+            --text-main: #1a2b4a;
+            --text-muted: #5a7ba6;
+            --accent-radio: #1e6fd9;
+            --accent-radar: #0a84c9;
+            --accent-optic: #2b6cb0;
+            --accent-acoustic: #4a8fd4;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .accordion-container {
+            width: 700px;
+            height: 350px;
+            background-color: var(--bg-color);
+            border-radius: 0;
+            padding: 0;
+            overflow-y: auto;
+            box-shadow: none;
+            border: none;
+        }
+
+        /* Кастомный скроллбар */
+        .accordion-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .accordion-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .accordion-container::-webkit-scrollbar-thumb {
+            background: #c8dcf0;
+            border-radius: 3px;
+        }
+        .accordion-container::-webkit-scrollbar-thumb:hover {
+            background: #a0c4e8;
+        }
+
+        .accordion-item {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .accordion-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .accordion-item:hover {
+            border-color: #a8c8ea;
+        }
+
+        .accordion-item.active {
+            border-color: var(--item-accent, var(--accent-radio));
+        }
+
+        .accordion-item.active .accordion-header {
+            background-color: #f5f9ff;
+        }
+
+        .accordion-header {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s ease;
+        }
+
+        .accordion-header:hover {
+            background-color: #f5f9ff;
+        }
+
+        .sensor-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            flex-shrink: 0;
+            font-size: 0.95rem;
+            background-color: #eaf2fc;
+            color: var(--item-accent, var(--accent-radio));
+            transition: all 0.3s ease;
+        }
+
+        .accordion-item.active .sensor-icon {
+            background-color: var(--item-accent, var(--accent-radio));
+            color: #ffffff;
+        }
+
+        .header-text {
+            flex-grow: 1;
+        }
+
+        .header-text h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 1px;
+        }
+
+        .header-text .subtitle {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .accordion-arrow {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            color: var(--text-muted);
+            flex-shrink: 0;
+            font-size: 0.65rem;
+        }
+
+        .accordion-item.active .accordion-arrow {
+            transform: rotate(180deg);
+            color: var(--item-accent, var(--accent-radio));
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, padding 0.3s ease;
+            opacity: 0;
+            padding: 0 16px;
+        }
+
+        .accordion-item.active .accordion-content {
+            max-height: 500px;
+            opacity: 1;
+            padding: 0 16px 16px 16px;
+        }
+
+        .content-inner {
+            border-top: 1px solid var(--card-border);
+            padding-top: 12px;
+            font-size: 0.82rem;
+            color: var(--text-main);
+        }
+
+        .content-inner p {
+            margin-bottom: 8px;
+        }
+
+        .content-inner p:last-child {
+            margin-bottom: 0;
+        }
+
+        .highlight {
+            color: var(--item-accent, var(--accent-radio));
+            font-weight: 600;
+        }
+
+        .pros-cons {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .pros, .cons {
+            flex: 1;
+            min-width: 160px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+        }
+
+        .pros {
+            background-color: #f0faf3;
+            border-left: 3px solid #2ea043;
+        }
+
+        .cons {
+            background-color: #fff5f5;
+            border-left: 3px solid #e5534b;
+        }
+
+        .pros strong, .cons strong {
+            display: block;
+            margin-bottom: 3px;
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .pros strong { color: #2ea043; }
+        .cons strong { color: #e5534b; }
+
+        .pros ul, .cons ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .pros li, .cons li {
+            margin-bottom: 2px;
+            padding-left: 13px;
+            position: relative;
+            color: #3a4a60;
+        }
+
+        .pros li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #2ea043;
+            font-weight: bold;
+        }
+
+        .cons li::before {
+            content: "✕";
+            position: absolute;
+            left: 0;
+            color: #e5534b;
+            font-weight: bold;
+        }
+
+        .item-radio { --item-accent: var(--accent-radio); }
+        .item-radar { --item-accent: var(--accent-radar); }
+        .item-optic { --item-accent: var(--accent-optic); }
+        .item-acoustic { --item-accent: var(--accent-acoustic); }
+    </style>
+</head>
+<body>
+
+    <div class="accordion-container">
+
+        <!-- Радиочастотная пеленгация -->
+        <div class="accordion-item item-radio" onclick="toggleAccordion(this)">
+            <div class="accordion-header">
+                <div class="sensor-icon">📡</div>
+                <div class="header-text">
+                    <h3>Радиочастотная пеленгация</h3>
+                    <span class="subtitle">Пассивный мониторинг эфира</span>
+                </div>
+                <div class="accordion-arrow">▼</div>
+            </div>
+            <div class="accordion-content">
+                <div class="content-inner">
+                    <p><span class="highlight">Самый доступный способ</span> засечь беспилотник. Система пассивно слушает эфир: каналы связи между дроном и оператором, видеопоток, телеметрию. Ничего не излучает, стоит недорого. Подходит для первого эшелона предупреждения.</p>
+                    <p><strong>Ограничение:</strong> автономный дрон, летящий по заранее заданной программе, не общается с оператором — пеленгатор его не увидит. А в городской насыщенной радиосреде отделить сигнал дрона от фона Wi-Fi, сотовой связи и радиорелейных линий крайне трудно.</p>
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <strong>Плюсы</strong>
+                            <ul>
+                                <li>Низкая стоимость</li>
+                                <li>Пассивность</li>
+                                <li>Работа по каналам связи</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <strong>Минусы</strong>
+                            <ul>
+                                <li>Не видит автономные дроны</li>
+                                <li>Сложность в городе</li>
+                                <li>Требует анализа сигнатур</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Радар -->
+        <div class="accordion-item item-radar" onclick="toggleAccordion(this)">
+            <div class="accordion-header">
+                <div class="sensor-icon">📶</div>
+                <div class="header-text">
+                    <h3>Радар</h3>
+                    <span class="subtitle">Активное излучение и отражение</span>
+                </div>
+                <div class="accordion-arrow">▼</div>
+            </div>
+            <div class="accordion-content">
+                <div class="content-inner">
+                    <p>В отличие от пеленгатора, <span class="highlight">излучает сигнал и ловит отражённый</span>. Он видит автономные дроны, определяет дальность и скорость цели.</p>
+                    <p><strong>Ограничение:</strong> малая эффективная площадь рассеяния коммерческих БПЛА, влияние подстилающей поверхности и наземные помехи серьёзно ограничивают возможности. Системы вроде «Зубр» умеют вести автоматическое сопровождение, но требуют грамотной настройки: углы обзора, зоны перекрытия соседних станций, отстройка от местных отражений от зданий и вышек.</p>
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <strong>Плюсы</strong>
+                            <ul>
+                                <li>Видит автономные дроны</li>
+                                <li>Определяет дальность и скорость</li>
+                                <li>Автосопровождение цели</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <strong>Минусы</strong>
+                            <ul>
+                                <li>Малая ЭПР дронов</li>
+                                <li>Влияние подстилающей поверхности</li>
+                                <li>Сложная настройка</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Оптико-инфракрасные системы -->
+        <div class="accordion-item item-optic" onclick="toggleAccordion(this)">
+            <div class="accordion-header">
+                <div class="sensor-icon">🎥</div>
+                <div class="header-text">
+                    <h3>Оптико-инфракрасные системы</h3>
+                    <span class="subtitle">Визуальное подтверждение</span>
+                </div>
+                <div class="accordion-arrow">▼</div>
+            </div>
+            <div class="accordion-content">
+                <div class="content-inner">
+                    <p>Видеокамера в связке с тепловизором дают то, чего не могут радар и пеленгатор: <span class="highlight">визуальное подтверждение, классификацию цели и фиксацию доказательств</span>.</p>
+                    <p><strong>Ограничение:</strong> ночью тепловизор работает, но поле зрения ограничено. В дождь или туман эффективность падает. Поэтому оптику никогда не ставят как самостоятельный эшелон — только в связке с радиочастотным датчиком и радаром, чтобы оператор мог глазами подтвердить: да, это дрон, а не птица.</p>
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <strong>Плюсы</strong>
+                            <ul>
+                                <li>Визуальная идентификация</li>
+                                <li>Работа ночью (ИК)</li>
+                                <li>Фиксация доказательств</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <strong>Минусы</strong>
+                            <ul>
+                                <li>Зависимость от погоды</li>
+                                <li>Ограниченное поле зрения</li>
+                                <li>Не работает самостоятельно</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Акустические сенсоры -->
+        <div class="accordion-item item-acoustic" onclick="toggleAccordion(this)">
+            <div class="accordion-header">
+                <div class="sensor-icon">🔊</div>
+                <div class="header-text">
+                    <h3>Акустические сенсоры</h3>
+                    <span class="subtitle">Распознавание звука двигателей</span>
+                </div>
+                <div class="accordion-arrow">▼</div>
+            </div>
+            <div class="accordion-content">
+                <div class="content-inner">
+                    <p>Распознают звук двигателей дрона. <span class="highlight">Стоят дёшево, работают пассивно</span>, но дальность мала, а промышленный шум объекта их глушит.</p>
+                    <p><strong>Вывод:</strong> как дополнение к основной системе имеют смысл; как самостоятельное средство — нет.</p>
+                    <div class="pros-cons">
+                        <div class="pros">
+                            <strong>Плюсы</strong>
+                            <ul>
+                                <li>Дешевизна</li>
+                                <li>Пассивность</li>
+                                <li>Дополнение к системе</li>
+                            </ul>
+                        </div>
+                        <div class="cons">
+                            <strong>Минусы</strong>
+                            <ul>
+                                <li>Малая дальность</li>
+                                <li>Шумовая помеха</li>
+                                <li>Не самостоятельное средство</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function toggleAccordion(element) {
+            const isActive = element.classList.contains('active');
+            document.querySelectorAll('.accordion-item.active').forEach(item => {
+                item.classList.remove('active');
+            });
+            if (!isActive) {
+                element.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>
