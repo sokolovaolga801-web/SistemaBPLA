@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Собери эшелон защиты · Резервуарный парк</title>
+<style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Roboto, system-ui, sans-serif; }
+
+    html, body {
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+    }
+    body {
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 12px;
+    }
+
+    .stage {
+        width: 700px;
+        height: 400px;
+        background: #ffffff;
+        border-radius: 16px;
+        border: 1.5px solid #d3e3f5;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #0d3a6b;
+        margin: 0 0 2px 0;
+        letter-spacing: -0.2px;
+    }
+    .subtitle {
+        font-size: 0.7rem;
+        color: #5a7fa8;
+        margin: 0 0 6px 0;
+        line-height: 1.2;
+    }
+
+    .page {
+        display: none;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+    }
+    .page.active { display: flex; }
+
+    /* Пул мер — без прокрутки */
+    .pool {
+        background: #f2f7fd;
+        border: 1.5px dashed #a8c8e8;
+        border-radius: 10px;
+        padding: 7px 8px;
+        margin-bottom: 8px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        align-content: flex-start;
+        justify-content: center;
+        flex-shrink: 0;
+        overflow: visible;
+    }
+
+    .card {
+        background: #ffffff;
+        border: 1.5px solid #b6d3ef;
+        border-radius: 7px;
+        padding: 4px 9px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #10406f;
+        cursor: grab;
+        user-select: none;
+        transition: transform .12s ease, box-shadow .12s ease, background .12s;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        box-shadow: 0 1px 3px -1px rgba(16, 64, 111, 0.18);
+        touch-action: none;
+        max-width: 100%;
+        line-height: 1.15;
+    }
+    .card:hover { background: #e9f3fd; border-color: #6aa6dd; transform: translateY(-1px); }
+    .card.dragging { opacity: .35; }
+    .card .ico { font-size: 0.84rem; }
+
+    /* Колонки — крупнее, без прокрутки */
+    .columns {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        flex: 1;
+        min-height: 0;
+        margin-bottom: 6px;
+    }
+
+    .column {
+        background: #f7fbff;
+        border: 1.5px solid #c3dbf2;
+        border-radius: 10px;
+        padding: 7px 8px;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        transition: background .15s, border-color .15s;
+        overflow: hidden;
+    }
+    .column.over { background: #e3f0fd; border-color: #4a90d9; border-style: dashed; }
+
+    .col-head {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #0d3a6b;
+        margin-bottom: 6px;
+        padding-bottom: 5px;
+        border-bottom: 2px solid #e2eefb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+    }
+    .col-head .cnt {
+        font-size: 0.7rem;
+        background: #e2eefb;
+        color: #3d6f9e;
+        border-radius: 20px;
+        padding: 2px 9px;
+        font-weight: 600;
+    }
+
+    .drop {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        align-content: flex-start;
+        flex: 1;
+        min-height: 0;
+        padding: 1px;
+        overflow: visible;
+    }
+
+    .card.correct { background: #e2f7e5; border-color: #43a85a; color: #1c5e2b; }
+    .card.correct:hover { background: #d3f2d8; }
+    .card.wrong { background: #fde8e8; border-color: #e05353; color: #8c2020; }
+    .card.wrong:hover { background: #fbdcdc; }
+    .card.placed { cursor: default; }
+    .card.placed:hover { transform: none; }
+
+    /* Нижняя панель */
+    .bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        padding-top: 5px;
+        border-top: 1.5px solid #e6eff9;
+        flex-shrink: 0;
+    }
+    .hint {
+        font-size: 0.7rem;
+        color: #6b8cae;
+        line-height: 1.2;
+        max-width: 44%;
+    }
+    .hint b.g { color: #2f8a45; }
+    .hint b.r { color: #c93a3a; }
+
+    .btns { display: flex; gap: 6px; }
+
+    button {
+        background: #1c6fc4;
+        color: #fff;
+        border: none;
+        border-radius: 7px;
+        padding: 7px 14px;
+        font-size: 0.74rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background .15s, transform .1s;
+        white-space: nowrap;
+    }
+    button:hover { background: #15589c; }
+    button:active { transform: scale(.97); }
+    button:disabled {
+        background: #b9cee2;
+        cursor: not-allowed;
+        color: #eef5fc;
+    }
+    button.ghost {
+        background: #fff;
+        color: #1c6fc4;
+        border: 1.5px solid #a9c9e8;
+        padding: 6px 12px;
+    }
+    button.ghost:hover { background: #eef5fd; }
+
+    /* ---------- СТРАНИЦА 2: критичные меры на всю страницу ---------- */
+    .crit-box {
+        background: #f7fbff;
+        border: 1.5px solid #c3dbf2;
+        border-radius: 12px;
+        padding: 10px 12px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+    .crit-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        border-bottom: 2px solid #e2eefb;
+        padding-bottom: 6px;
+        flex-shrink: 0;
+    }
+    .crit-head h3 { margin: 0; font-size: 0.92rem; color: #0d3a6b; }
+    .crit-counter {
+        font-size: 0.78rem;
+        font-weight: 700;
+        background: #e2eefb;
+        color: #3d6f9e;
+        border-radius: 20px;
+        padding: 3px 12px;
+        transition: background .3s;
+    }
+    .crit-counter.full { background: #d8f0dd; color: #237a3a; }
+
+    .crit-pool {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding-bottom: 8px;
+        margin-bottom: 8px;
+        border-bottom: 1.5px dashed #dbe8f6;
+        flex-shrink: 0;
+        overflow: visible;
+    }
+    .crit-pool .card {
+        background: #fff;
+        border-color: #b6d3ef;
+        cursor: pointer;
+        font-size: 0.76rem;
+        padding: 4px 10px;
+    }
+    .crit-pool .card:hover { background: #f2f7fd; border-color: #6aa6dd; transform: translateY(-1px); }
+
+    /* Прокрутка списка критичных мер */
+    .crit-items {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        padding-right: 6px;
+        align-content: flex-start;
+    }
+    .crit-items::-webkit-scrollbar { width: 8px; }
+    .crit-items::-webkit-scrollbar-track { background: #eef5fc; border-radius: 10px; }
+    .crit-items::-webkit-scrollbar-thumb { background: #a9c9e8; border-radius: 10px; }
+    .crit-items::-webkit-scrollbar-thumb:hover { background: #7fa9d2; }
+
+    .crit-item {
+        background: #eef6ff;
+        border-left: 5px solid #1c6fc4;
+        border-radius: 9px;
+        padding: 9px 12px;
+        animation: pop .2s ease;
+        flex-shrink: 0;
+    }
+    @keyframes pop { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+    .crit-item .name {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: #0d3a6b;
+        margin-bottom: 3px;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+    .crit-item .comm {
+        font-size: 0.74rem;
+        color: #4a6f94;
+        line-height: 1.35;
+    }
+    .crit-empty {
+        font-size: 0.78rem;
+        color: #8aa9c6;
+        font-style: italic;
+        text-align: center;
+        padding: 24px 8px;
+    }
+
+    .card.pick { background: #fff6e0; border-color: #e0a94a; }
+    .card.picked { background: #ffe9b8; border-color: #c98a1e; color: #6e4a04; }
+
+    @media (max-width: 730px) {
+        .stage { width: 100%; height: auto; min-height: 400px; }
+    }
+</style>
+</head>
+<body>
+<div class="stage">
+
+    <!-- ========== СТРАНИЦА 1 ========== -->
+    <section class="page active" id="page1">
+        <h2 class="title">Собери эшелон защиты · Шаг 1</h2>
+        <p class="subtitle">Перетащите меры в колонку (или кликните по карточке), затем нажмите <b>«Проверить»</b>. Верные — <b style="color:#2f8a45">зелёные</b>, ошибочные — <b style="color:#c93a3a">красные</b>.</p>
+
+        <div class="pool" id="pool"></div>
+
+        <div class="columns">
+            <div class="column" id="colEng" data-type="eng">
+                <div class="col-head"><span>⚙️ Инженерные</span><span class="cnt" id="cntEng">0</span></div>
+                <div class="drop" id="dropEng"></div>
+            </div>
+            <div class="column" id="colOrg" data-type="org">
+                <div class="col-head"><span>📋 Организационные</span><span class="cnt" id="cntOrg">0</span></div>
+                <div class="drop" id="dropOrg"></div>
+            </div>
+        </div>
+
+        <div class="bar">
+            <div class="hint" id="hint1">Распределите все меры и нажмите «Проверить».</div>
+            <div class="btns">
+                <button class="ghost" id="resetBtn1">⟲ Сбросить</button>
+                <button id="checkBtn">✓ Проверить</button>
+                <button id="nextBtn" disabled>Далее →</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========== СТРАНИЦА 2 ========== -->
+    <section class="page" id="page2">
+        <h2 class="title">Эшелон защиты · Шаг 2</h2>
+        <p class="subtitle">Выберите <b>три самые критичные</b> меры для резервуарного парка — кликом по карточке.</p>
+
+        <div class="crit-box">
+            <div class="crit-head">
+                <h3>🔥 Критичные меры</h3>
+                <span class="crit-counter" id="critCounter">0 / 3</span>
+            </div>
+            <div class="crit-pool" id="critPool"></div>
+            <div class="crit-items" id="critItems">
+                <div class="crit-empty">Кликните по карточке выше, чтобы сделать её критичной</div>
+            </div>
+        </div>
+
+        <div class="bar" style="margin-top:8px;">
+            <button class="ghost" id="backBtn">← Назад</button>
+            <button class="ghost" id="resetBtn2">⟲ Сбросить</button>
+        </div>
+    </section>
+
+</div>
+
+<script>
+(function () {
+    const MEASURES = [
+        { id: 'nitrogen',     label: 'Азотная подушка',              ico: '🧪', correct: 'eng' },
+        { id: 'shutoff',      label: 'Аварийная отсечка',             ico: '⛔', correct: 'eng' },
+        { id: 'power',        label: 'Резервное питание',             ico: '🔋', correct: 'eng' },
+        { id: 'pump',         label: 'Резервный насос',               ico: '🌀', correct: 'eng' },
+        { id: 'water',        label: 'Секционное водоснабжение',      ico: '💧', correct: 'eng' },
+        { id: 'foam',         label: 'Пенная установка',              ico: '🧯', correct: 'eng' },
+        { id: 'bunding',      label: 'Обвалование резервуаров',       ico: '🛡️', correct: 'eng' },
+        { id: 'detectors',    label: 'Датчики загазованности',        ico: '📟', correct: 'eng' },
+        { id: 'valves',       label: 'Дышащие клапаны',               ico: '🔩', correct: 'eng' },
+        { id: 'cooling',      label: 'Стационарное орошение',         ico: '🚿', correct: 'eng' },
+
+        { id: 'drills',       label: 'Учения «атака БПЛА»',           ico: '🎯', correct: 'org' },
+        { id: 'coordination', label: 'Координация со службами',        ico: '📡', correct: 'org' },
+        { id: 'plan',         label: 'План локализации',              ico: '📄', correct: 'org' },
+        { id: 'patrol',       label: 'Патрулирование периметра',       ico: '🚔', correct: 'org' }
+    ];
+
+    const COMMENTS = {
+        nitrogen:     'Исключает поступление воздуха в газовое пространство при пробое крыши.',
+        shutoff:      'Не даёт повреждению распространиться по парку.',
+        power:        'Обеспечивает работу систем безопасности при потере основного электроснабжения.',
+        pump:         'Позволяет продолжить перекачку или подачу воды при отказе основного насоса.',
+        water:        'Локализует пожар за счёт подачи воды в повреждённую секцию.',
+        foam:         'Подаёт пену на очаг, быстро подавляя горение нефтепродуктов.',
+        bunding:      'Удерживает разлившуюся жидкость в пределах обвалования.',
+        detectors:    'Раннее обнаружение утечки даёт время на отключение и локализацию.',
+        valves:       'Препятствуют проникновению пламени в газовое пространство.',
+        cooling:      'Охлаждает стенки соседних резервуаров, не давая огню распространиться.',
+        drills:       'Учения проверяют готовность, но сами по себе не являются инженерным решением.',
+        coordination: 'Сокращает время реакции и улучшает взаимодействие при ЧС.',
+        plan:         'Определяет порядок действий персонала при аварии и её локализации.',
+        patrol:       'Позволяет вовремя заметить угрозу и привести силы в готовность.'
+    };
+
+    let placement = {};
+    let criticalIds = [];
+    let checked = false;
+
+    const poolEl    = document.getElementById('pool');
+    const dropEng   = document.getElementById('dropEng');
+    const dropOrg   = document.getElementById('dropOrg');
+    const colEng    = document.getElementById('colEng');
+    const colOrg    = document.getElementById('colOrg');
+    const cntEng    = document.getElementById('cntEng');
+    const cntOrg    = document.getElementById('cntOrg');
+    const hint1     = document.getElementById('hint1');
+    const nextBtn   = document.getElementById('nextBtn');
+    const checkBtn  = document.getElementById('checkBtn');
+
+    const critPool  = document.getElementById('critPool');
+    const critItems = document.getElementById('critItems');
+    const critCounter = document.getElementById('critCounter');
+
+    const page1 = document.getElementById('page1');
+    const page2 = document.getElementById('page2');
+
+    const getM = id => MEASURES.find(m => m.id === id);
+
+    function makeCard(m, opts = {}) {
+        const el = document.createElement('div');
+        el.className = 'card';
+        el.dataset.id = m.id;
+        el.innerHTML = `<span class="ico">${m.ico}</span><span>${m.label}</span>`;
+        if (opts.placed) {
+            el.classList.add('placed');
+            if (checked) {
+                el.classList.add(placement[m.id] === m.correct ? 'correct' : 'wrong');
+            }
+            el.draggable = true;
+        } else if (!opts.crit) {
+            el.draggable = true;
+        } else {
+            el.draggable = false;
+        }
+        return el;
+    }
+
+    function renderPage1() {
+        poolEl.innerHTML = '';
+        dropEng.innerHTML = '';
+        dropOrg.innerHTML = '';
+
+        MEASURES.forEach(m => {
+            const p = placement[m.id];
+            if (p === 'eng')      dropEng.appendChild(makeCard(m, { placed: true }));
+            else if (p === 'org') dropOrg.appendChild(makeCard(m, { placed: true }));
+            else                  poolEl.appendChild(makeCard(m));
+        });
+
+        const nEng = MEASURES.filter(m => placement[m.id] === 'eng').length;
+        const nOrg = MEASURES.filter(m => placement[m.id] === 'org').length;
+        cntEng.textContent = nEng;
+        cntOrg.textContent = nOrg;
+
+        const total = nEng + nOrg;
+        checkBtn.disabled = total < MEASURES.length;
+
+        if (!checked) {
+            nextBtn.disabled = true;
+            if (total < MEASURES.length) {
+                hint1.innerHTML = `Распределено ${total} из ${MEASURES.length}. Перетащите оставшиеся меры.`;
+            } else {
+                hint1.innerHTML = `Все ${MEASURES.length} мер распределены. Нажмите «Проверить».`;
+            }
+        }
+
+        attachDnD();
+    }
+
+    let draggedId = null;
+
+    function attachDnD() {
+        document.querySelectorAll('.card[draggable="true"]').forEach(card => {
+            card.addEventListener('dragstart', e => {
+                draggedId = card.dataset.id;
+                e.dataTransfer.setData('text/plain', draggedId);
+                e.dataTransfer.effectAllowed = 'move';
+                card.classList.add('dragging');
+            });
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+                draggedId = null;
+                colEng.classList.remove('over');
+                colOrg.classList.remove('over');
+            });
+        });
+    }
+
+    function setupDropZones() {
+        [ [colEng, 'eng'], [colOrg, 'org'] ].forEach(([col, type]) => {
+            col.addEventListener('dragover', e => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                col.classList.add('over');
+            });
+            col.addEventListener('dragleave', () => col.classList.remove('over'));
+            col.addEventListener('drop', e => {
+                e.preventDefault();
+                col.classList.remove('over');
+                const id = e.dataTransfer.getData('text/plain') || draggedId;
+                if (!id) return;
+                placement[id] = type;
+                checked = false;
+                renderPage1();
+            });
+        });
+    }
+
+    poolEl.addEventListener('click', e => {
+        const card = e.target.closest('.card');
+        if (!card) return;
+        const id = card.dataset.id;
+        if (placement[id]) return;
+        const toEng = confirm(`«${getM(id).label}» — разместить в ИНЖЕНЕРНЫЕ?\n\nOK — Инженерные\nОтмена — Организационные`);
+        placement[id] = toEng ? 'eng' : 'org';
+        checked = false;
+        renderPage1();
+    });
+
+    checkBtn.addEventListener('click', () => {
+        const total = MEASURES.filter(m => placement[m.id]).length;
+        if (total < MEASURES.length) return;
+
+        checked = true;
+        const right = MEASURES.filter(m => placement[m.id] === m.correct).length;
+        const wrong = MEASURES.length - right;
+
+        if (wrong === 0) {
+            hint1.innerHTML = `✅ Отлично! Все ${MEASURES.length} мер распределены верно. Можно перейти к выбору критичных.`;
+            nextBtn.disabled = false;
+        } else {
+            hint1.innerHTML = `Верно: <b class="g">${right}</b>, с ошибкой: <b class="r">${wrong}</b>. Исправьте красные карточки и проверьте снова.`;
+            nextBtn.disabled = true;
+        }
+        renderPage1();
+    });
+
+    function renderPage2() {
+        critPool.innerHTML = '';
+
+        MEASURES.forEach(m => {
+            const cp = makeCard(m, { crit: true });
+            cp.draggable = false;
+            cp.classList.add('pick');
+            if (criticalIds.includes(m.id)) cp.classList.add('picked');
+            cp.addEventListener('click', () => toggleCritical(m.id));
+            critPool.appendChild(cp);
+        });
+
+        renderCritItems();
+        updateCounter();
+    }
+
+    function toggleCritical(id) {
+        const i = criticalIds.indexOf(id);
+        if (i !== -1) {
+            criticalIds.splice(i, 1);
+        } else {
+            if (criticalIds.length >= 3) {
+                critCounter.style.background = '#fde8e8';
+                critCounter.style.color = '#b32d2d';
+                setTimeout(() => {
+                    critCounter.style.background = '';
+                    critCounter.style.color = '';
+                }, 700);
+                return;
+            }
+            criticalIds.push(id);
+        }
+        document.querySelectorAll('#critPool .card').forEach(c => {
+            c.classList.toggle('picked', criticalIds.includes(c.dataset.id));
+        });
+        renderCritItems();
+        updateCounter();
+    }
+
+    function updateCounter() {
+        critCounter.textContent = `${criticalIds.length} / 3`;
+        critCounter.classList.toggle('full', criticalIds.length === 3);
+    }
+
+    function renderCritItems() {
+        if (criticalIds.length === 0) {
+            critItems.innerHTML = '<div class="crit-empty">Кликните по карточке выше, чтобы сделать её критичной</div>';
+            return;
+        }
+        critItems.innerHTML = '';
+        criticalIds.forEach(id => {
+            const m = getM(id);
+            const div = document.createElement('div');
+            div.className = 'crit-item';
+            div.innerHTML = `
+                <div class="name"><span>${m.ico}</span><span>${m.label}</span></div>
+                <div class="comm">${COMMENTS[id]}</div>
+            `;
+            critItems.appendChild(div);
+        });
+    }
+
+    nextBtn.addEventListener('click', () => {
+        if (nextBtn.disabled) return;
+        page1.classList.remove('active');
+        page2.classList.add('active');
+        renderPage2();
+    });
+
+    document.getElementById('backBtn').addEventListener('click', () => {
+        page2.classList.remove('active');
+        page1.classList.add('active');
+        renderPage1();
+    });
+
+    function resetAll() {
+        placement = {};
+        criticalIds = [];
+        checked = false;
+        MEASURES.forEach(m => placement[m.id] = null);
+        page2.classList.remove('active');
+        page1.classList.add('active');
+        renderPage1();
+    }
+
+    document.getElementById('resetBtn1').addEventListener('click', resetAll);
+    document.getElementById('resetBtn2').addEventListener('click', resetAll);
+
+    MEASURES.forEach(m => placement[m.id] = null);
+    renderPage1();
+    setupDropZones();
+})();
+</script>
+</body>
+</html>
