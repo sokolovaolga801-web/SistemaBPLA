@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⏱ 0–60 · 560×700 · протокол БПЛА</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ===== ХОЛСТ 560×700, БЕЗ ГРАНИЦ ===== */
+    .canvas {
+      width: 560px;
+      height: 700px;
+      background: #ffffff;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: none;
+      outline: none;
+      box-shadow: none;
+      border-radius: 0;
+    }
+
+    /* ===== КРУГ ===== */
+    .circle-wrapper {
+      width: 560px;
+      height: 560px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: inset 0 0 50px rgba(59, 130, 246, 0.06);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      animation: appear 0.6s ease both;
+    }
+
+    @keyframes appear {
+      from { opacity: 0; transform: scale(0.94); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* внутренний круг */
+    .circle-inner {
+      width: 480px;
+      height: 480px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 40%, #f8fbff 0%, #e6f0ff 70%, #dbeafe 100%);
+      box-shadow: 
+        inset 0 0 32px rgba(37, 99, 235, 0.12),
+        0 0 0 1px rgba(147, 197, 253, 0.4) inset;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* центральное ядро */
+    .core {
+      position: absolute;
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #ffffff 0%, #dbeafe 100%);
+      box-shadow: 
+        0 0 0 5px #ffffff,
+        0 0 0 8px #3b82f6,
+        0 0 24px 8px rgba(59, 130, 246, 0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      z-index: 10;
+      animation: pulse 3s infinite ease-in-out;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 5px #ffffff, 0 0 0 8px #3b82f6, 0 0 24px 8px rgba(59, 130, 246, 0.4); }
+      50% { box-shadow: 0 0 0 5px #ffffff, 0 0 0 11px #2563eb, 0 0 36px 14px rgba(37, 99, 235, 0.7); }
+    }
+
+    .core .big {
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: #1e3a8a;
+      line-height: 1;
+      letter-spacing: -1.5px;
+    }
+
+    .core .small {
+      font-size: 0.58rem;
+      font-weight: 700;
+      color: #2563eb;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-top: 3px;
+    }
+
+    .core .sub {
+      font-size: 0.45rem;
+      color: #3b82f6;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      margin-top: 1px;
+      opacity: 0.8;
+    }
+
+    /* ===== СТРЕЛКИ-УКАЗАТЕЛИ ===== */
+    .arrow-ring {
+      position: absolute;
+      width: 384px;
+      height: 384px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 6;
+      flex-shrink: 0;
+    }
+
+    .arrow-ring .arrow {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: #3b82f6;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 0.8rem;
+      font-weight: 900;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 0 2px white, 0 0 0 4px #93c5fd;
+      animation: arrowPulse 2s infinite;
+      z-index: 7;
+    }
+
+    @keyframes arrowPulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 0 2px white, 0 0 0 4px #93c5fd; }
+      50% { transform: scale(1.15); box-shadow: 0 0 16px rgba(37, 99, 235, 1), 0 0 0 2px white, 0 0 0 6px #60a5fa; }
+    }
+
+    .arrow-1 {
+      top: 0;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation-delay: 0s;
+    }
+
+    .arrow-1::after {
+      content: "↘";
+      font-size: 0.85rem;
+      line-height: 1;
+    }
+
+    .arrow-2 {
+      top: 50%;
+      right: 0;
+      transform: translate(50%, -50%);
+      animation-delay: 0.5s;
+    }
+
+    .arrow-2::after {
+      content: "↙";
+      font-size: 0.85rem;
+      line-height: 1;
+    }
+
+    .arrow-3 {
+      bottom: 0;
+      left: 50%;
+      transform: translate(-50%, 50%);
+      animation-delay: 1s;
+    }
+
+    .arrow-3::after {
+      content: "↖";
+      font-size: 0.85rem;
+      line-height: 1;
+    }
+
+    .arrow-4 {
+      top: 50%;
+      left: 0;
+      transform: translate(-50%, -50%);
+      animation-delay: 1.5s;
+    }
+
+    .arrow-4::after {
+      content: "↗";
+      font-size: 0.85rem;
+      line-height: 1;
+    }
+
+    /* карточки */
+    .card {
+      position: absolute;
+      width: 185px;
+      background: #ffffff;
+      border: 1.5px solid #bfdbfe;
+      border-radius: 20px;
+      padding: 0.75rem 0.85rem;
+      box-shadow: 0 8px 16px -6px rgba(0, 80, 200, 0.2), 0 0 0 1px #ffffff inset;
+      transition: all 0.25s ease;
+      cursor: default;
+      z-index: 5;
+      animation: cardFade 0.5s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+      flex-shrink: 0;
+    }
+
+    .card:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 14px 24px -8px rgba(37, 99, 235, 0.45), 0 0 0 2px #3b82f6 inset;
+      background: #f8fbff;
+      z-index: 20;
+      transform: scale(1.03) translateY(-3px);
+    }
+
+    .card:active {
+      transform: scale(0.99);
+    }
+
+    .card:focus-visible {
+      outline: 3px solid #2563eb;
+      outline-offset: 3px;
+      z-index: 20;
+    }
+
+    @keyframes cardFade {
+      from { opacity: 0; transform: scale(0.9) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .card[data-pos="top-right"] {
+      top: 40px;
+      right: 40px;
+      animation-delay: 0.05s;
+    }
+
+    .card[data-pos="bottom-right"] {
+      bottom: 40px;
+      right: 40px;
+      animation-delay: 0.15s;
+    }
+
+    .card[data-pos="bottom-left"] {
+      bottom: 40px;
+      left: 40px;
+      animation-delay: 0.25s;
+    }
+
+    .card[data-pos="top-left"] {
+      top: 40px;
+      left: 40px;
+      animation-delay: 0.35s;
+    }
+
+    .card h2 {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #0b2b5c;
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+      line-height: 1.25;
+    }
+
+    .card h2 .chip {
+      background: #dbeafe;
+      padding: 0.08rem 0.4rem;
+      border-radius: 40px;
+      font-size: 0.48rem;
+      font-weight: 600;
+      color: #1e40af;
+      border: 1px solid #93c5fd;
+      white-space: nowrap;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #3b82f6;
+      color: white;
+      font-weight: 800;
+      font-size: 0.6rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 40px;
+      letter-spacing: 0.2px;
+      margin-bottom: 0.35rem;
+      box-shadow: 0 3px 6px rgba(37, 99, 235, 0.35);
+    }
+
+    .card .list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .card .list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.3rem;
+      font-size: 0.58rem;
+      color: #1e293b;
+      line-height: 1.4;
+    }
+
+    .card .list li::before {
+      content: "▹";
+      color: #3b82f6;
+      font-weight: 700;
+      font-size: 0.7rem;
+      line-height: 1.2;
+      flex-shrink: 0;
+    }
+
+    .card .quote-mini {
+      background: #eff6ff;
+      border-left: 2.5px solid #3b82f6;
+      padding: 0.3rem 0.5rem;
+      border-radius: 6px;
+      margin-top: 0.4rem;
+      font-size: 0.53rem;
+      color: #1e3a5f;
+      line-height: 1.4;
+      font-style: italic;
+    }
+
+    .card .quote-mini strong {
+      font-style: normal;
+      color: #0b2b5c;
+      font-weight: 700;
+    }
+
+    /* подпись направления */
+    .direction-label {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #eff6ff;
+      border: 1.5px solid #93c5fd;
+      color: #1e40af;
+      font-size: 0.5rem;
+      font-weight: 700;
+      padding: 0.2rem 0.7rem;
+      border-radius: 40px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      z-index: 15;
+      box-shadow: 0 3px 8px rgba(37, 99, 235, 0.15);
+      white-space: nowrap;
+    }
+
+    /* ===== АДАПТАЦИЯ ===== */
+    @media (max-width: 600px) {
+      .canvas {
+        width: 100vw;
+        height: 100vh;
+      }
+
+      .circle-wrapper {
+        width: 88vmin;
+        height: 88vmin;
+        max-width: 560px;
+        max-height: 560px;
+      }
+
+      .circle-inner {
+        width: 84%;
+        height: 84%;
+      }
+
+      .card {
+        width: 150px;
+        padding: 0.6rem 0.7rem;
+      }
+
+      .card[data-pos="top-right"] { top: 22px; right: 22px; }
+      .card[data-pos="bottom-right"] { bottom: 22px; right: 22px; }
+      .card[data-pos="bottom-left"] { bottom: 22px; left: 22px; }
+      .card[data-pos="top-left"] { top: 22px; left: 22px; }
+
+      .core {
+        width: 76px;
+        height: 76px;
+      }
+
+      .core .big {
+        font-size: 1.3rem;
+      }
+
+      .arrow-ring {
+        width: 76%;
+        height: 76%;
+      }
+
+      .arrow-ring .arrow {
+        width: 15px;
+        height: 15px;
+        font-size: 0.6rem;
+      }
+    }
+
+    @media (max-width: 450px) {
+      .card {
+        width: 128px;
+        padding: 0.5rem 0.55rem;
+        border-radius: 16px;
+      }
+
+      .card h2 {
+        font-size: 0.62rem;
+      }
+
+      .card .list li {
+        font-size: 0.5rem;
+      }
+
+      .card .quote-mini {
+        font-size: 0.46rem;
+        padding: 0.25rem 0.35rem;
+      }
+
+      .badge {
+        font-size: 0.52rem;
+        padding: 0.12rem 0.45rem;
+      }
+
+      .core {
+        width: 62px;
+        height: 62px;
+      }
+
+      .core .big {
+        font-size: 1.05rem;
+      }
+
+      .core .small {
+        font-size: 0.48rem;
+      }
+
+      .core .sub {
+        font-size: 0.38rem;
+      }
+
+      .card[data-pos="top-right"] { top: 14px; right: 14px; }
+      .card[data-pos="bottom-right"] { bottom: 14px; right: 14px; }
+      .card[data-pos="bottom-left"] { bottom: 14px; left: 14px; }
+      .card[data-pos="top-left"] { top: 14px; left: 14px; }
+
+      .arrow-ring .arrow {
+        width: 12px;
+        height: 12px;
+        font-size: 0.5rem;
+      }
+
+      .direction-label {
+        font-size: 0.42rem;
+        padding: 0.15rem 0.55rem;
+        bottom: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- ХОЛСТ 560×700, БЕЗ ГРАНИЦ -->
+  <div class="canvas">
+    <!-- КРУГ 560×560 -->
+    <div class="circle-wrapper">
+      <div class="circle-inner">
+        <!-- КОЛЬЦО СО СТРЕЛКАМИ -->
+        <div class="arrow-ring">
+          <div class="arrow arrow-1"></div>
+          <div class="arrow arrow-2"></div>
+          <div class="arrow arrow-3"></div>
+          <div class="arrow arrow-4"></div>
+        </div>
+
+        <!-- карточка 0-15 -->
+        <div class="card" data-pos="top-right" tabindex="0">
+          <div class="badge">⏱ 0–15 сек</div>
+          <h2>Подтверждение угрозы <span class="chip">верификация</span></h2>
+          <ul class="list">
+            <li>Проверка через камеры / ЭОС.</li>
+            <li>Реальный дрон или ложное срабатывание?</li>
+            <li>Без подтверждения — никаких действий.</li>
+          </ul>
+          <div class="quote-mini">
+            <strong>Ориентир:</strong> достоверность, а не скорость.
+          </div>
+        </div>
+
+        <!-- карточка 15-30 -->
+        <div class="card" data-pos="bottom-right" tabindex="0">
+          <div class="badge">⏱ 15–30 сек</div>
+          <h2>Оценка ситуации <span class="chip">классификация</span></h2>
+          <ul class="list">
+            <li>Критическая точка и курс.</li>
+            <li>Вход в зону или транзит.</li>
+            <li>Тип управления: радио / автономный.</li>
+          </ul>
+          <div class="quote-mini">
+            <strong>Ошибка:</strong> глушить всё подряд без анализа.
+          </div>
+        </div>
+
+        <!-- карточка 30-60 -->
+        <div class="card" data-pos="bottom-left" tabindex="0">
+          <div class="badge">⏱ 30–60 сек</div>
+          <h2>Реакция и локализация <span class="chip">локальность</span></h2>
+          <ul class="list">
+            <li>Оповещение охраны и смены.</li>
+            <li>РЭБ-подавление по сектору.</li>
+            <li>Пожарная готовность (без выезда).</li>
+          </ul>
+          <div class="quote-mini">
+            <strong>Правило:</strong> остановка только в зоне инцидента.
+          </div>
+        </div>
+
+        <!-- карточка >60 -->
+        <div class="card" data-pos="top-left" tabindex="0">
+          <div class="badge">⏱ &gt;60 сек</div>
+          <h2>Фиксация и последствия <span class="chip">разбор</span></h2>
+          <ul class="list">
+            <li>Фиксация параметров, доклад.</li>
+            <li>План локальной изоляции.</li>
+            <li>Разбор: что сработало, где задержки.</li>
+          </ul>
+          <div class="quote-mini">
+            <strong>Цель:</strong> быстрее и точнее следующий цикл.
+          </div>
+        </div>
+
+        <!-- центральное ядро -->
+        <div class="core">
+          <span class="big">60″</span>
+          <span class="small">протокол</span>
+          <span class="sub">БПЛА · локально</span>
+        </div>
+
+        <!-- подпись направления -->
+        <div class="direction-label">⟳ движение по часовой стрелке</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
