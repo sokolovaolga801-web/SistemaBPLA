@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тренажёр БПЛА · 3 варианта защиты</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+
+        .trainer {
+            width: 700px;
+            height: 500px;
+            background: #f0f6fc;
+            border-radius: 24px;
+            padding: 14px 18px;
+            /* Тень убрана — остался только тонкий контур */
+            border: 1px solid #b8d6f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Заголовок */
+        .header {
+            text-align: center;
+            margin-bottom: 6px;
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #004c99;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+
+        .header .sub {
+            font-size: 0.66rem;
+            color: #3a7ca5;
+            border-bottom: 1px solid #b8d6f0;
+            padding-bottom: 4px;
+            margin-top: 1px;
+        }
+
+        /* Основная сетка */
+        .main {
+            display: flex;
+            gap: 12px;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* Левая колонка с дроном */
+        .drone-col {
+            flex: 1.25;
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 10px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            /* Внутренняя тень/контур убраны для чистоты */
+            border: 1px solid #cce4ff;
+            overflow: hidden;
+        }
+
+        /* Изображение дрона */
+        .drone-img {
+            width: 100%;
+            flex: 1;
+            min-height: 0;
+            background: #f5faff;
+            border-radius: 14px;
+            border: 1px solid #b8d6f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            overflow: hidden;
+        }
+
+        .drone-img svg {
+            width: 100%;
+            height: 100%;
+            max-height: 100%;
+            display: block;
+        }
+
+        .drone-name {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #004c99;
+            margin-top: 6px;
+            text-align: center;
+            line-height: 1.15;
+            flex-shrink: 0;
+        }
+
+        .drone-desc {
+            font-size: 0.6rem;
+            color: #2c5f8a;
+            text-align: center;
+            line-height: 1.25;
+            margin-top: 3px;
+            padding: 0 2px;
+            overflow-y: auto;
+            max-height: 44px;
+            flex-shrink: 0;
+        }
+
+        /* Правая колонка */
+        .defense-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 10px 12px;
+            border: 1px solid #cce4ff;
+            overflow: hidden;
+        }
+
+        .defense-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            flex-shrink: 0;
+        }
+
+        .defense-header span {
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #004c99;
+        }
+
+        .progress-badge {
+            background: #d9ebff;
+            border-radius: 20px;
+            padding: 2px 10px;
+            font-size: 0.64rem;
+            color: #004c99;
+            font-weight: 600;
+            border: 1px solid #a8c8e8;
+        }
+
+        /* Список кнопок — 3 варианта */
+        .defense-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+            min-height: 0;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+
+        .defense-btn {
+            background: #ffffff;
+            border: 1.5px solid #a8c8e8;
+            color: #004c99;
+            padding: 10px 12px;
+            border-radius: 30px;
+            font-size: 0.72rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.12s ease;
+            letter-spacing: 0.2px;
+            line-height: 1.2;
+            flex-shrink: 0;
+        }
+
+        .defense-btn:hover:not(:disabled) {
+            background: #e6f2ff;
+            border-color: #4a9eff;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 100, 200, 0.12);
+        }
+
+        .defense-btn.selected-correct {
+            background: #cceeff;
+            border-color: #0077cc;
+            color: #003366;
+            font-weight: 700;
+            box-shadow: 0 0 0 2px rgba(0, 119, 204, 0.25);
+        }
+
+        .defense-btn.selected-wrong {
+            background: #f0f0f5;
+            border-color: #9999bb;
+            color: #555577;
+            text-decoration: line-through 1px #8888aa;
+        }
+
+        .defense-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /* Фидбек */
+        .feedback {
+            background: #e6f2ff;
+            border-left: 4px solid #4a9eff;
+            border-radius: 10px;
+            padding: 6px 9px;
+            font-size: 0.64rem;
+            color: #004c99;
+            min-height: 40px;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            margin-bottom: 8px;
+            line-height: 1.3;
+        }
+
+        .feedback.correct {
+            border-left-color: #0077cc;
+            background: #dbeeff;
+            color: #003366;
+            font-weight: 500;
+        }
+
+        .feedback.wrong {
+            border-left-color: #8899bb;
+            background: #eef3fa;
+            color: #335577;
+        }
+
+        /* Нижняя панель */
+        .bottom-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .btn {
+            background: #ffffff;
+            border: 1.5px solid #a8c8e8;
+            color: #004c99;
+            padding: 7px 14px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 0.68rem;
+            cursor: pointer;
+            transition: 0.12s;
+            white-space: nowrap;
+            letter-spacing: 0.2px;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: #e6f2ff;
+            border-color: #4a9eff;
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary {
+            background: #0077cc;
+            border-color: #0077cc;
+            color: #ffffff;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #0066b3;
+            border-color: #0066b3;
+        }
+
+        .score-box {
+            font-size: 0.68rem;
+            color: #2c5f8a;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .score-box strong {
+            color: #004c99;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-left: 2px;
+        }
+
+        /* Скролл */
+        .drone-desc::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .drone-desc::-webkit-scrollbar-thumb {
+            background: #a8c8e8;
+            border-radius: 6px;
+        }
+
+        .drone-desc::-webkit-scrollbar-track {
+            background: transparent;
+        }
+    </style>
+</head>
+<body>
+<div class="trainer">
+    <div class="header">
+        <h1>🛸 БПЛА &amp; ЗАЩИТА</h1>
+        <div class="sub">определи тип дрона и выбери правильную защиту из трёх вариантов</div>
+    </div>
+
+    <div class="main">
+        <div class="drone-col">
+            <div class="drone-img" id="droneImg"></div>
+            <div class="drone-name" id="droneName">—</div>
+            <div class="drone-desc" id="droneDesc"></div>
+        </div>
+
+        <div class="defense-col">
+            <div class="defense-header">
+                <span>🛡️ Средство защиты</span>
+                <span class="progress-badge" id="progress">1 / 5</span>
+            </div>
+            <div class="defense-list" id="defenseList"></div>
+            <div class="feedback" id="feedback">⚡ Выберите один из трёх вариантов</div>
+            <div class="bottom-bar">
+                <button class="btn btn-primary" id="nextBtn" disabled>Следующий</button>
+                <button class="btn" id="resetBtn">Заново</button>
+                <div class="score-box">Счёт: <strong id="score">0</strong>/<span id="total">5</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const drones = [
+        {
+            name: 'Квадрокоптер',
+            desc: 'Мультироторный БПЛА для разведки и сброса малых грузов. Низкая высота, малая скорость.',
+            correct: 'РЭБ (радиоэлектронная борьба)',
+            options: [
+                'РЭБ (радиоэлектронная борьба)',
+                'Зенитная артиллерия / ПЗРК',
+                'Акустический детектор'
+            ],
+            svg: `<svg viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg">
+                <rect x="70" y="60" width="60" height="30" rx="8" fill="#b8d6f0" stroke="#4a9eff" stroke-width="2.5"/>
+                <circle cx="50" cy="50" r="17" fill="#d9ebff" stroke="#4a9eff" stroke-width="2.5"/>
+                <circle cx="150" cy="50" r="17" fill="#d9ebff" stroke="#4a9eff" stroke-width="2.5"/>
+                <circle cx="50" cy="100" r="17" fill="#d9ebff" stroke="#4a9eff" stroke-width="2.5"/>
+                <circle cx="150" cy="100" r="17" fill="#d9ebff" stroke="#4a9eff" stroke-width="2.5"/>
+                <line x1="50" y1="50" x2="80" y2="65" stroke="#4a9eff" stroke-width="3.5"/>
+                <line x1="150" y1="50" x2="120" y2="65" stroke="#4a9eff" stroke-width="3.5"/>
+                <line x1="50" y1="100" x2="80" y2="85" stroke="#4a9eff" stroke-width="3.5"/>
+                <line x1="150" y1="100" x2="120" y2="85" stroke="#4a9eff" stroke-width="3.5"/>
+                <circle cx="100" cy="75" r="7" fill="#0077cc"/>
+                <rect x="85" y="44" width="30" height="9" rx="4" fill="#a8c8e8"/>
+            </svg>`
+        },
+        {
+            name: 'БПЛА самолётного типа',
+            desc: 'Дальний радиус, высокая скорость, большая продолжительность полёта. Разведка и удары.',
+            correct: 'Зенитная артиллерия / ПЗРК',
+            options: [
+                'РЭБ (подавление видеосигнала)',
+                'Зенитная артиллерия / ПЗРК',
+                'Акустический детектор'
+            ],
+            svg: `<svg viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="100" cy="70" rx="48" ry="13" fill="#b8d6f0" stroke="#4a9eff" stroke-width="2.5"/>
+                <polygon points="100,38 68,70 100,70" fill="#d9ebff" stroke="#4a9eff" stroke-width="2"/>
+                <polygon points="100,102 68,70 100,70" fill="#d9ebff" stroke="#4a9eff" stroke-width="2"/>
+                <rect x="44" y="61" width="22" height="18" rx="5" fill="#e6f2ff" stroke="#4a9eff" stroke-width="2"/>
+                <circle cx="132" cy="70" r="11" fill="#d9ebff" stroke="#4a9eff" stroke-width="2.5"/>
+                <line x1="143" y1="70" x2="172" y2="70" stroke="#4a9eff" stroke-width="3.5"/>
+                <circle cx="172" cy="70" r="5" fill="#0077cc"/>
+            </svg>`
+        },
+        {
+            name: 'Барражирующий боеприпас',
+            desc: '«Дрон-камикадзе». Летает в зоне ожидания, затем атакует цель. Маневренный, малозаметный.',
+            correct: 'РЭБ и огневые средства',
+            options: [
+                'РЭБ и огневые средства',
+                'Зенитная артиллерия / ПЗРК',
+                'Акустический детектор'
+            ],
+            svg: `<svg viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="100" cy="70" rx="38" ry="16" fill="#b8d6f0" stroke="#4a9eff" stroke-width="2.5"/>
+                <polygon points="100,33 78,55 100,55" fill="#d9ebff" stroke="#4a9eff" stroke-width="2"/>
+                <polygon points="100,107 78,85 100,85" fill="#d9ebff" stroke="#4a9eff" stroke-width="2"/>
+                <circle cx="58" cy="70" r="13" fill="#d9ebff" stroke="#4a9eff" stroke-width="2.5"/>
+                <circle cx="142" cy="70" r="13" fill="#d9ebff" stroke="#4a9eff" stroke-width="2.5"/>
+                <line x1="58" y1="70" x2="85" y2="70" stroke="#4a9eff" stroke-width="3.5"/>
+                <line x1="142" y1="70" x2="115" y2="70" stroke="#4a9eff" stroke-width="3.5"/>
+                <circle cx="100" cy="70" r="9" fill="#a8c8e8"/>
+                <circle cx="100" cy="70" r="4.5" fill="#0077cc"/>
+            </svg>`
+        },
+        {
+            name: 'Разведывательный БПЛА',
+            desc: 'Малые размеры, электрические двигатели, тихий полёт. Ведёт наблюдение, корректирует огонь.',
+            correct: 'РЭБ и акустический детектор',
+            options: [
+                'РЭБ и акустический детектор',
+                'Зенитная артиллерия / ПЗРК',
+                'РЭБ (подавление видеосигнала)'
+            ],
+            svg: `<svg viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg">
+                <rect x="78" y="54" width="44" height="27" rx="11" fill="#b8d6f0" stroke="#4a9eff" stroke-width="2.5"/>
+                <circle cx="58" cy="48" r="11" fill="#d9ebff" stroke="#4a9eff" stroke-width="2"/>
+                <circle cx="142" cy="48" r="11" fill="#d9ebff" stroke="#4a9eff" stroke-width="2"/>
+                <circle cx="58" cy="86" r="11" fill="#d9ebff" stroke="#4a9eff" stroke-width="2"/>
+                <circle cx="142" cy="86" r="11" fill="#d9ebff" stroke="#4a9eff" stroke-width="2"/>
+                <line x1="58" y1="48" x2="85" y2="62" stroke="#4a9eff" stroke-width="3"/>
+                <line x1="142" y1="48" x2="115" y2="62" stroke="#4a9eff" stroke-width="3"/>
+                <line x1="58" y1="86" x2="85" y2="73" stroke="#4a9eff" stroke-width="3"/>
+                <line x1="142" y1="86" x2="115" y2="73" stroke="#4a9eff" stroke-width="3"/>
+                <circle cx="100" cy="68" r="8" fill="#0077cc"/>
+                <circle cx="100" cy="68" r="3.5" fill="#ffffff"/>
+            </svg>`
+        },
+        {
+            name: 'FPV-дрон',
+            desc: 'Высокоманевренный, управляется оператором через очки. Используется для атак и разведки.',
+            correct: 'РЭБ (подавление видеосигнала)',
+            options: [
+                'РЭБ (подавление видеосигнала)',
+                'Зенитная артиллерия / ПЗРК',
+                'Акустический детектор'
+            ],
+            svg: `<svg viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg">
+                <rect x="68" y="59" width="64" height="24" rx="9" fill="#b8d6f0" stroke="#4a9eff" stroke-width="2.5"/>
+                <circle cx="48" cy="48" r="15" fill="#d9ebff" stroke="#4a9eff" stroke-width="2.5"/>
+                <circle cx="152" cy="48" r="15" fill="#d9ebff" stroke="#4a9eff" stroke-width="2.5"/>
+                <circle cx="48" cy="92" r="15" fill="#d9ebff" stroke="#4a9eff" stroke-width="2.5"/>
+                <circle cx="152" cy="92" r="15" fill="#d9ebff" stroke="#4a9eff" stroke-width="2.5"/>
+                <line x1="48" y1="48" x2="78" y2="64" stroke="#4a9eff" stroke-width="3.5"/>
+                <line x1="152" y1="48" x2="122" y2="64" stroke="#4a9eff" stroke-width="3.5"/>
+                <line x1="48" y1="92" x2="78" y2="78" stroke="#4a9eff" stroke-width="3.5"/>
+                <line x1="152" y1="92" x2="122" y2="78" stroke="#4a9eff" stroke-width="3.5"/>
+                <circle cx="100" cy="71" r="7" fill="#0077cc"/>
+                <rect x="91" y="47" width="18" height="9" rx="3" fill="#a8c8e8"/>
+            </svg>`
+        }
+    ];
+
+    let order = [];
+    let currentIdx = 0;
+    let score = 0;
+    let answered = false;
+    const totalQ = drones.length;
+
+    const droneImg = document.getElementById('droneImg');
+    const droneName = document.getElementById('droneName');
+    const droneDesc = document.getElementById('droneDesc');
+    const defenseList = document.getElementById('defenseList');
+    const feedback = document.getElementById('feedback');
+    const nextBtn = document.getElementById('nextBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const progress = document.getElementById('progress');
+    const scoreEl = document.getElementById('score');
+    const totalEl = document.getElementById('total');
+
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function render() {
+        const drone = order[currentIdx];
+
+        droneImg.innerHTML = drone.svg;
+        droneName.textContent = drone.name;
+        droneDesc.textContent = drone.desc;
+        progress.textContent = `${currentIdx + 1} / ${totalQ}`;
+
+        const opts = shuffle([...drone.options]);
+        defenseList.innerHTML = '';
+        opts.forEach(def => {
+            const btn = document.createElement('button');
+            btn.className = 'defense-btn';
+            btn.textContent = def;
+            btn.dataset.def = def;
+            btn.addEventListener('click', () => handleAnswer(btn, def, drone.correct));
+            defenseList.appendChild(btn);
+        });
+
+        answered = false;
+        nextBtn.disabled = true;
+        feedback.className = 'feedback';
+        feedback.textContent = '⚡ Выберите один из трёх вариантов';
+
+        document.querySelectorAll('.defense-btn').forEach(b => {
+            b.disabled = false;
+            b.classList.remove('selected-correct', 'selected-wrong');
+        });
+
+        scoreEl.textContent = score;
+        totalEl.textContent = totalQ;
+    }
+
+    function handleAnswer(btn, selected, correct) {
+        if (answered) return;
+        answered = true;
+
+        const isCorrect = (selected === correct);
+        document.querySelectorAll('.defense-btn').forEach(b => b.disabled = true);
+
+        if (isCorrect) {
+            btn.classList.add('selected-correct');
+            feedback.className = 'feedback correct';
+            feedback.textContent = `✅ Верно! Для «${order[currentIdx].name}»: ${correct}.`;
+            score++;
+            scoreEl.textContent = score;
+        } else {
+            btn.classList.add('selected-wrong');
+            document.querySelectorAll('.defense-btn').forEach(b => {
+                if (b.dataset.def === correct) b.classList.add('selected-correct');
+            });
+            feedback.className = 'feedback wrong';
+            feedback.textContent = `❌ Неверно. Правильно: ${correct}.`;
+        }
+
+        if (currentIdx < totalQ - 1) {
+            nextBtn.disabled = false;
+        } else {
+            nextBtn.disabled = true;
+            setTimeout(() => {
+                feedback.textContent = `🏁 Тренировка завершена! Результат: ${score} из ${totalQ}. Нажмите «Заново».`;
+                feedback.className = 'feedback correct';
+            }, 400);
+        }
+    }
+
+    function next() {
+        if (currentIdx < totalQ - 1) {
+            currentIdx++;
+            render();
+        } else {
+            nextBtn.disabled = true;
+        }
+    }
+
+    function reset() {
+        order = shuffle([...drones]);
+        currentIdx = 0;
+        score = 0;
+        answered = false;
+        scoreEl.textContent = '0';
+        nextBtn.disabled = true;
+        render();
+    }
+
+    function init() {
+        order = shuffle([...drones]);
+        currentIdx = 0;
+        score = 0;
+        render();
+        nextBtn.addEventListener('click', next);
+        resetBtn.addEventListener('click', reset);
+    }
+
+    init();
+</script>
+</body>
+</html>
